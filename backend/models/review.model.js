@@ -1,7 +1,5 @@
 import mongoose from "mongoose";
 
-const mongoose = require("mongoose");
-
 const reviewSchema = new mongoose.Schema(
   {
     id: {
@@ -32,6 +30,6 @@ const reviewSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-const Review = mongoose.models('Review', reviewSchema);
+const Review = mongoose.model('Review', reviewSchema);
 
 export default Review

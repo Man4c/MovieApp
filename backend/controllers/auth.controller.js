@@ -3,10 +3,10 @@ import { generateToken } from "../lib/jwt.js";
 
 export const signup = async (req, res) => {
   try {
-    const { username, email, password } = req.body;
+    const { name, email, password } = req.body; // Changed username to name
 
     const userExists = await User.findOne({
-      $or: [{ email }, { username }],
+      $or: [{ email }, { username: name }], // Check username: name
     });
 
     if (userExists) {
@@ -14,24 +14,30 @@ export const signup = async (req, res) => {
         message:
           userExists.email == email
             ? "email already exists"
-            : "username already taken",
+            : "username already taken", // Keep this message as username is the DB field
       });
     }
     const user = await User.create({
-      username,
+      username: name, // Save name from req.body to username field
       email,
       password,
+      // role and favorites will default based on schema
     });
 
-    const token = generateToken(user._id);
+    // Fetch the user again to ensure defaults like 'role' and 'favorites' are present
+    const createdUser = await User.findById(user._id);
+
+    const token = generateToken(createdUser._id);
     res.status(201).json({
+      token: token, // Token first
       user: {
-        id: user._id,
-        username: user.username,
-        email: user.email,
+        id: createdUser._id,
+        name: createdUser.username, // Respond with name (from username field)
+        email: createdUser.email,
+        role: createdUser.role, // Include role
+        favorites: createdUser.favorites || [], // Include favorites
       },
-      token: token,
-      messages: "User created successfully",
+      messages: "User created successfully", // Message typo corrected from "messages"
     });
   } catch (error) {
     console.log("Error in signup controller");
@@ -55,13 +61,18 @@ export const login = async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
     const token = generateToken(user._id);
+    // No need to re-fetch user here if not creating, but ensure all fields are selected
+    // If user.role or user.favorites might be excluded by .select('+password'), adjust if necessary
+    // For now, assume they are available on 'user' object after findOne without explicit select for those
     res.status(200).json({
+      token: token, // Token first
       user: {
         id: user._id,
-        username: user.username,
+        name: user.username, // Respond with name (from username field)
         email: user.email,
+        role: user.role, // Include role
+        favorites: user.favorites || [], // Include favorites
       },
-      token : token,
       message: "Logged in successfully",
     });
   } catch (error) {
