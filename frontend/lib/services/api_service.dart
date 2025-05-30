@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_video_app/models/video_model.dart';
 import 'package:flutter_video_app/models/review_model.dart';
+import 'package:flutter_video_app/models/user_model.dart'; // Added UserModel import
 
 class ApiService {
   static const String baseUrl = 'http://localhost:4002/api';
@@ -18,7 +19,7 @@ class ApiService {
     };
   }
 
-  static Future<Map<String, dynamic>> login(
+  static Future<UserModel> login( // Changed return type
     String email,
     String password,
   ) async {
@@ -30,13 +31,31 @@ class ApiService {
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-      _token = data['token'];
-      return data;
+      _token = data['token'] as String?;
+      return UserModel.fromJson(data['user'] as Map<String, dynamic>); // Return UserModel
     }
     throw _handleError(response);
   }
 
-  static Future<Map<String, dynamic>> register(
+  static Future<List<String>> getMovieTypes() async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/movies/types/all'),
+      // Public route, so only Content-Type header might be needed,
+      // or none if server doesn't strictly require it for GET.
+      // For consistency, let's use a minimal header.
+      headers: {'Content-Type': 'application/json'},
+    );
+
+    if (response.statusCode == 200) {
+      final responseData = json.decode(response.body);
+      // Backend sends { success: true, data: types }
+      final typesList = responseData['data'] as List?;
+      return List<String>.from(typesList ?? []);
+    }
+    throw _handleError(response);
+  }
+
+  static Future<UserModel> register( // Changed return type
     String name,
     String email,
     String password,
@@ -49,8 +68,8 @@ class ApiService {
 
     if (response.statusCode == 201) {
       final data = json.decode(response.body);
-      _token = data['token'];
-      return data;
+      _token = data['token'] as String?;
+      return UserModel.fromJson(data['user'] as Map<String, dynamic>); // Return UserModel
     }
     throw _handleError(response);
   }
@@ -67,14 +86,15 @@ class ApiService {
     };
 
     final response = await http.get(
-      Uri.parse('$baseUrl/videos').replace(queryParameters: queryParams),
+      Uri.parse('$baseUrl/movies').replace(queryParameters: queryParams),
       headers: _headers,
     );
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-      return (data['videos'] as List)
-          .map((json) => VideoModel.fromJson(json))
+      // Based on movie.controller.js getAllMovies, it's res.status(200).json({ success: true, movies: mappedMovies, ...});
+      return (data['movies'] as List)
+          .map((json) => VideoModel.fromJson(json as Map<String, dynamic>))
           .toList();
     }
     throw _handleError(response);
@@ -88,8 +108,9 @@ class ApiService {
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-      return (data['videos'] as List)
-          .map((json) => VideoModel.fromJson(json))
+      // Backend getUserFavorites returns { success: true, data: mappedFavorites }
+      return (data['data'] as List)
+          .map((json) => VideoModel.fromJson(json as Map<String, dynamic>))
           .toList();
     }
     throw _handleError(response);
@@ -109,22 +130,15 @@ class ApiService {
   // Reviews endpoints
   static Future<List<ReviewModel>> getVideoReviews(String videoId) async {
     final response = await http.get(
-      Uri.parse('$baseUrl/videos/$videoId/reviews'),
+      Uri.parse('$baseUrl/movies/$videoId/reviews'),
       headers: _headers,
     );
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-      return (data['reviews'] as List)
-          .map(
-            (json) => ReviewModel(
-              id: json['id'],
-              videoId: json['videoId'],
-              comment: json['comment'],
-              rating: json['rating'].toDouble(),
-              timestamp: DateTime.parse(json['timestamp']),
-            ),
-          )
+      // Backend getMovieReviews returns { success: true, count: ..., data: mappedReviews }
+      return (data['data'] as List)
+          .map((json) => ReviewModel.fromJson(json as Map<String, dynamic>))
           .toList();
     }
     throw _handleError(response);
@@ -136,20 +150,29 @@ class ApiService {
     double rating,
   ) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/videos/$videoId/reviews'),
+      Uri.parse('$baseUrl/movies/$videoId/reviews'),
       headers: _headers,
       body: json.encode({'comment': comment, 'rating': rating}),
     );
 
     if (response.statusCode == 201) {
       final data = json.decode(response.body);
-      return ReviewModel(
-        id: data['id'],
-        videoId: data['videoId'],
-        comment: data['comment'],
-        rating: data['rating'].toDouble(),
-        timestamp: DateTime.parse(data['timestamp']),
-      );
+      // Backend addMovieReview returns { success: true, data: { ...mappedReview... } }
+      return ReviewModel.fromJson(data['data'] as Map<String, dynamic>);
+    }
+    throw _handleError(response);
+  }
+
+  static Future<UserModel> getCurrentUser() async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/users/me'),
+      headers: _headers,
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      // Backend getMe returns { success: true, data: { id: ..., name: ..., ... } }
+      return UserModel.fromJson(data['data'] as Map<String, dynamic>);
     }
     throw _handleError(response);
   }

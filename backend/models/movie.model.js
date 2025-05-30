@@ -47,6 +47,11 @@ const movieSchema = new mongoose.Schema(
             type: String, 
             required: true 
         },
+        tags: [
+            {
+                type: String
+            }
+        ],
     }
 );
 

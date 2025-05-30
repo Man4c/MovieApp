@@ -6,7 +6,7 @@ class VideoModel {
   final String backdropPath;
   final String videoUrl;
   final List<String> categories;
-  final String type;
+  final List<String> type; // Changed from String to List<String>
   final double rating;
   final List<String> tags;
   final String releaseDate;
@@ -33,12 +33,11 @@ class VideoModel {
       thumbnailUrl: json['thumbnailUrl'] as String,
       backdropPath: json['backdropPath'] as String,
       videoUrl: json['videoUrl'] as String,
-      categories: List<String>.from(json['categories'] as List),
-      type: json['type'] as String,
-
+      categories: List<String>.from(json['categories'] as List? ?? []), // Ensure null check
+      type: List<String>.from(json['type'] as List? ?? []), // Ensure null check and correct type
+      // Removed duplicated lines for categories and type
       rating: (json['rating'] as num).toDouble(),
-
-      tags: List<String>.from(json['tags'] as List),
+      tags: List<String>.from(json['tags'] as List? ?? []), // Ensure null check
       releaseDate: json['releaseDate'] as String,
     );
   }
@@ -52,7 +51,7 @@ class VideoModel {
       'backdropPath': backdropPath,
       'videoUrl': videoUrl,
       'categories': categories,
-      'type': type,
+      'type': type, // This remains the same, but 'type' is now List<String>
       'rating': rating,
       'tags': tags,
       'releaseDate': releaseDate,

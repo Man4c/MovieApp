@@ -1,26 +1,31 @@
-import 'package:flutter_video_app/providers/video_provider.dart';
+// Removed Provider imports as it's no longer used here directly
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 
 class CategorySelector extends StatelessWidget {
-  const CategorySelector({super.key});
+  final List<String> categories;
+  final String selectedCategory;
+  final Function(String) onCategorySelected;
+
+  const CategorySelector({
+    super.key,
+    required this.categories,
+    required this.selectedCategory,
+    required this.onCategorySelected,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final videoProvider = Provider.of<VideoProvider>(context);
-    final categories = videoProvider.getCategories();
-    final selectedCategory = videoProvider.selectedCategory;
-
+    // No longer uses Provider here, categories and selectedCategory come from constructor
     return Container(
       height: MediaQuery.of(context).size.height * 0.07, // Responsive height
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        itemCount: categories.length,
+        itemCount: categories.length, // Use widget.categories
         padding: const EdgeInsets.symmetric(horizontal: 8),
         itemBuilder: (context, index) {
-          final category = categories[index];
-          final isSelected = category == selectedCategory;
+          final category = categories[index]; // Use widget.categories
+          final isSelected = category == selectedCategory; // Use widget.selectedCategory
 
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -28,7 +33,7 @@ class CategorySelector extends StatelessWidget {
               color: Colors.transparent,
               child: InkWell(
                 onTap: () {
-                  videoProvider.setCategory(category);
+                  onCategorySelected(category); // Call the callback
                 },
                 borderRadius: BorderRadius.circular(20),
                 child: Container(
