@@ -17,7 +17,7 @@ class UserModel {
     return UserModel(
       // Handles if 'id' or '_id' is present
       id: json['_id'] as String? ?? json['id'] as String? ?? '',
-      name: json['name'] as String? ?? '', // Backend sends 'name'
+      name: json['username'] as String? ?? '', // Map 'username' from backend to 'name'
       email: json['email'] as String? ?? '',
       favorites: List<String>.from(json['favorites'] as List? ?? []),
       role: json['role'] as String? ?? 'customer', // Default to 'customer' if null
@@ -26,8 +26,8 @@ class UserModel {
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id, // Serialize as 'id'
-      'name': name, // Serialize as 'name'
+      '_id': id, // Serialize as '_id'
+      'username': name, // Map 'name' back to 'username'
       'email': email,
       'favorites': favorites,
       'role': role,

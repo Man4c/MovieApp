@@ -37,24 +37,34 @@ export const getAllMovies = async (req, res) => {
 
     let moviesQuery = Movie.find(query);
 
-    // Only apply pagination if not loading all
-    if (!loadAll) {
-      const page = parseInt(req.query.page) || 1;
-      const pageSize = 10;
+    const page = parseInt(req.query.page) || 1;
+    const pageSize = 10; // Default page size
+
+    // Only apply pagination if not loading all AND no category filter is active
+    if (!loadAll && !categoryQuery) {
       moviesQuery = moviesQuery.skip((page - 1) * pageSize).limit(pageSize);
     }
+    // If categoryQuery is present, pagination is skipped by default.
+    // If loadAll is true, pagination is also skipped.
 
     const moviesFromDB = await moviesQuery;
-
     const mappedMovies = moviesFromDB.map(mapMovieData);
 
-    res.status(200).json({
+    let responseJson = {
       success: true,
       movies: mappedMovies,
-      currentPage: page,
-      totalPages: totalPages,
-      totalMovies: totalMovies,
-    });
+    };
+
+    if (!loadAll && !categoryQuery) {
+      const totalMoviesCount = await Movie.countDocuments(query);
+      responseJson.currentPage = page;
+      responseJson.totalPages = Math.ceil(totalMoviesCount / pageSize);
+      responseJson.totalMovies = totalMoviesCount;
+    } else {
+      responseJson.totalMovies = moviesFromDB.length;
+    }
+
+    res.status(200).json(responseJson);
   } catch (error) {
     res.status(500).json({
       success: false,

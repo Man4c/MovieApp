@@ -4,10 +4,11 @@ import 'package:flutter_video_app/services/api_service.dart';
 import 'package:flutter_video_app/providers/auth_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_video_app/screens/favorites_screen.dart';
+import 'package:flutter_video_app/screens/discovery_screen.dart';
 import 'package:flutter_video_app/widgets/video_row.dart';
 import 'package:flutter_video_app/widgets/featured_banner_carousel.dart';
 import 'package:flutter_video_app/utils/constants.dart';
-// Removed VideoProvider import
+import 'package:flutter_video_app/screens/user_profile_screen.dart'; // Import UserProfileScreen
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -151,28 +152,37 @@ class _HomeScreenState extends State<HomeScreen> {
           appBar: AppBar(
             backgroundColor: Colors.transparent,
             elevation: 0,
-            title:
-                _isSearching
-                    ? TextField(
+            leading: Builder( // Added Builder to get context for Scaffold.of(context)
+              builder: (context) => IconButton(
+                icon: const Icon(Icons.menu, color: Colors.white), // Standard menu icon
+                onPressed: () => Scaffold.of(context).openDrawer(),
+              ),
+            ),
+            title: _isSearching
+                ? Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8.0),
+                    ),
+                    child: TextField(
                       controller: _searchController,
                       autofocus: true,
                       decoration: InputDecoration(
                         hintText: Constants.searchHint,
-                        hintStyle: const TextStyle(color: Colors.white60),
+                        hintStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
                         border: InputBorder.none,
                         suffixIcon: IconButton(
-                          icon: const Icon(Icons.clear, color: Colors.white60),
+                          icon: Icon(Icons.clear, color: Colors.white.withOpacity(0.7)),
                           onPressed: _clearSearch,
                         ),
                       ),
-                      style: const TextStyle(color: Colors.white),
-                      onSubmitted:
-                          _onSearchChanged, // Use onSubmitted or onChanged
-                    )
-                    : Text(
-                      _currentIndex == 0
-                          ? Constants.homeScreenTitle
-                          : Constants.favoritesScreenTitle,
+                      style: const TextStyle(color: Colors.white, fontSize: 16),
+                      onChanged: _onSearchChanged, // Debounced search
+                    ),
+                  )
+                : Text(
+                        _getAppBarTitle(), // Use a helper method for title
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -235,6 +245,7 @@ class _HomeScreenState extends State<HomeScreen> {
             type: BottomNavigationBarType.fixed,
             items: const [
               BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+              BottomNavigationBarItem(icon: Icon(Icons.explore), label: 'Discovery'), // New Item
               BottomNavigationBarItem(
                 icon: Icon(Icons.favorite),
                 label: 'Favorites',
@@ -246,71 +257,117 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  String _getAppBarTitle() {
+    switch (_currentIndex) {
+      case 0:
+        return Constants.homeScreenTitle;
+      case 1:
+        return Constants.discoveryScreenTitle;
+      case 2:
+        return Constants.favoritesScreenTitle;
+      default:
+        return Constants.appName;
+    }
+  }
+
   Widget _buildBody() {
-    if (_currentIndex == 1) {
+    // Handle tab changes for body content
+    if (_currentIndex == 1) { // Discovery Screen
+      return const DiscoveryScreen();
+    } else if (_currentIndex == 2) { // Favorites Screen
       return const FavoritesScreen();
     }
+    // Default is Home Screen (index 0)
 
-    // Home Tab with Netflix-style rows
-    return _isLoadingVideos && _videos.isEmpty
-        ? const Center(
-          child: CircularProgressIndicator(color: Colors.deepOrange),
-        )
-        : RefreshIndicator(
-          onRefresh: () => _fetchVideos(loadAll: true),
-          child: SingleChildScrollView(
-            controller: _scrollController,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (_videos.isNotEmpty) ...[
-                  Builder(
-                    builder: (context) {
-                      final featuredVideos = _videos.take(5).toList();
-                      print('Featured videos count: ${featuredVideos.length}');
-                      if (featuredVideos.isNotEmpty) {
-                        print(
-                          'First featured video: ${featuredVideos[0].title}, backdrop: ${featuredVideos[0].backdropPath}',
-                        );
-                      }
-                      return FeaturedBannerCarousel(
-                        featuredVideos: featuredVideos,
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                ],
-                // Group videos by type
-                ...(_videos.isEmpty
-                    ? [
-                      Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(20.0),
-                          child: Text(
-                            _currentSearchTerm != null
-                                ? 'No videos found for "$_currentSearchTerm".'
-                                : 'No videos available.',
-                            style: const TextStyle(color: Colors.white70),
-                          ),
-                        ),
-                      ),
-                    ]
-                    : _groupVideosByType().entries.map((entry) {
-                      return VideoRow(title: entry.key, videos: entry.value);
-                    })),
-                if (_isLoadingVideos && _videos.isNotEmpty)
-                  const Padding(
-                    padding: EdgeInsets.all(16.0),
-                    child: Center(
-                      child: CircularProgressIndicator(
-                        color: Colors.deepOrange,
-                      ),
-                    ),
-                  ),
-                const SizedBox(height: 16),
-              ],
-            ),
+    // Search results view takes precedence if searching on Home tab
+    if (_isSearching && _currentSearchTerm != null && _currentSearchTerm!.isNotEmpty) {
+      // Search Results View
+      if (_isLoadingVideos && _videos.isEmpty) {
+        return const Center(child: CircularProgressIndicator(color: Colors.deepOrange));
+      }
+      if (_videos.isEmpty) {
+        return Center(
+          child: Text(
+            'No movies found for "$_currentSearchTerm".',
+            style: const TextStyle(color: Colors.white70, fontSize: 16),
           ),
         );
+      }
+      return GridView.builder(
+        padding: const EdgeInsets.all(8.0),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 2, // Adjust for responsiveness later if needed
+          childAspectRatio: 0.7, // Adjust as needed for VideoCard aspect ratio (0.7 is approx 130/(230*0.8) if card height is mostly image)
+                                 // VideoCard default width 130, height 230. Image is AspectRatio(2/3) of width.
+                                 // So image height is 130 * 3/2 = 195. Card height is 230.
+                                 // Aspect ratio of card: 130/230 = ~0.56. Let's try that.
+                                 // Or, if VideoCard height is dynamic, 130 / (130 * 3/2 + some_padding_for_title_if_any)
+                                 // For VideoCard width 130, height 230, its own aspect ratio is 130/230 = 0.565
+                                 // Let's use a common value or calculate based on VideoCard's actual rendering.
+                                 // Given VideoCard has AspectRatio(2/3) for image, and width 130, image height = 195.
+                                 // If VideoCard mostly consists of image, childAspectRatio should be close to 2/3 = 0.66
+                                 // Or if it's width/height of the card itself: 130/230 = 0.56
+          crossAxisSpacing: 8.0,
+          mainAxisSpacing: 8.0,
+        ),
+        itemCount: _videos.length,
+        itemBuilder: (context, index) {
+          final video = _videos[index];
+          return VideoCard(video: video); // VideoCard default width 130, height 230
+        },
+      );
+    }
+    // else, it's the Default Home View for index 0
+    return _isLoadingVideos && _videos.isEmpty
+        ? const Center(
+            child: CircularProgressIndicator(color: Colors.deepOrange),
+          )
+        : RefreshIndicator(
+            onRefresh: () => _fetchVideos(loadAll: true), // For default view
+            child: SingleChildScrollView(
+              controller: _scrollController, // Attach scroll controller here
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (_videos.isNotEmpty) ...[
+                    Builder(
+                      builder: (context) {
+                        final featuredVideos = _videos.take(5).toList();
+                        return FeaturedBannerCarousel(
+                          featuredVideos: featuredVideos,
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  ...(_videos.isEmpty && _currentSearchTerm == null // Show 'No videos available' only if not a failed search
+                      ? [
+                          const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(20.0),
+                              child: Text(
+                                'No videos available at the moment.',
+                                style: TextStyle(color: Colors.white70),
+                              ),
+                            ),
+                          ),
+                        ]
+                      : _groupVideosByType().entries.map((entry) {
+                          return VideoRow(title: entry.key, videos: entry.value);
+                        })),
+                  if (_isLoadingVideos && _videos.isNotEmpty) // Loading indicator for pagination
+                    const Padding(
+                      padding: EdgeInsets.all(16.0),
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          color: Colors.deepOrange,
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 16),
+                ],
+              ),
+            ),
+          );
   }
 }

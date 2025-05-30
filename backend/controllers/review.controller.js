@@ -27,10 +27,7 @@ export const addMovieReview = async (req, res) => {
     await review.save();
 
     // Map response
-    const populatedReview = await Review.findById(review._id).populate({
-      path: 'userId',
-      select: 'username'
-    });
+    const populatedReview = await Review.findById(review._id).populate('userId', '_id username');
 
     res.status(201).json({
       success: true,

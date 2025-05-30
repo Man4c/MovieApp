@@ -21,6 +21,7 @@ class Constants {
   
   static const String appName = 'Flutter Video Streaming';
   static const String homeScreenTitle = 'Video Streaming';
+  static const String discoveryScreenTitle = 'Discover Movies';
   static const String favoritesScreenTitle = 'My Favorites';
   static const String noFavoritesMessage = 'You have no favorites yet';
   static const String noReviewsMessage = 'No reviews yet. Be the first to review!';
