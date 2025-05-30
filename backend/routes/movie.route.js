@@ -2,8 +2,7 @@ import express from "express";
 import {
   getAllMovies,
   getAllMovieByType,
-  getMovieById,
-  getMovieTypes // Added getMovieTypes
+  getMovieById
 } from "../controllers/movie.controller.js";
 import {
   addMovieReview,
@@ -13,9 +12,6 @@ import {
 import { protectRoute } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
-
-// Route to get all unique movie types (public)
-router.get("/types/all", getMovieTypes);
 
 router.get("/", protectRoute, getAllMovies);
 router.get("/by-type/:type", protectRoute, getAllMovieByType);

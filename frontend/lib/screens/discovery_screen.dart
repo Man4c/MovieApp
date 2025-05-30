@@ -87,44 +87,63 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: _isLoadingGenres
-          ? const Center(child: CircularProgressIndicator(color: Colors.deepOrange))
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildGenreSelector(),
-                if (_selectedGenre == null && !_isLoadingMovies)
-                  const Expanded(
-                    child: Center(
-                      child: Text(
-                        'Select a genre to discover movies.',
-                        style: TextStyle(color: Colors.white70, fontSize: 16),
-                      ),
-                    ),
-                  ),
-                if (_isLoadingMovies)
-                  const Expanded(
-                    child: Center(child: CircularProgressIndicator(color: Colors.deepOrange))
-                  ),
-                if (_selectedGenre != null &&
-                    !_isLoadingMovies &&
-                    _moviesByGenre.containsKey(_selectedGenre!) &&
-                    _moviesByGenre[_selectedGenre!] != null)
+      // appBar: AppBar(title: Text(Constants.discoveryScreenTitle)), // AppBar is in HomeScreen
+      body: SafeArea( // Added SafeArea
+        child: _isLoadingGenres
+            ? const Center(child: CircularProgressIndicator(color: Colors.deepOrange))
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildGenreSelector(), // This should take its natural height
+
+                  // This Expanded widget will contain either the loading indicator for movies,
+                  // the movie grid, or a message.
                   Expanded(
-                    child: _moviesByGenre[_selectedGenre!]!.isEmpty
-                        ? Center(
-                            child: Text(
-                              'No movies found for "$_selectedGenre".',
-                              style: const TextStyle(color: Colors.white70, fontSize: 16),
-                            ),
-                          )
-                        : VideoGrid(
-                            videos: _moviesByGenre[_selectedGenre!]!,
-                            scrollController: _scrollController, // Pass the scroll controller
-                          ),
+                    child: _buildMoviesArea(),
                   ),
-              ],
-            ),
+                ],
+              ),
+      ),
+    );
+  }
+
+  Widget _buildMoviesArea() {
+    if (_isLoadingMovies) {
+      return const Center(child: CircularProgressIndicator(color: Colors.deepOrange));
+    }
+
+    if (_selectedGenre == null) {
+      if (_genres.isEmpty) { // No genres loaded at all
+        return const Center(
+          child: Text(
+            'No genres available at the moment. Pull to refresh or check connection.',
+            style: TextStyle(color: Colors.white70, fontSize: 16),
+            textAlign: TextAlign.center,
+          ),
+        );
+      }
+      return const Center( // Genres loaded, but none selected
+        child: Text(
+          'Select a genre to discover movies.',
+          style: TextStyle(color: Colors.white70, fontSize: 16),
+        ),
+      );
+    }
+
+    final moviesForSelectedGenre = _moviesByGenre[_selectedGenre!];
+
+    if (moviesForSelectedGenre == null || moviesForSelectedGenre.isEmpty) {
+      return Center(
+        child: Text(
+          'No movies found for "$_selectedGenre".',
+          style: const TextStyle(color: Colors.white70, fontSize: 16),
+        ),
+      );
+    }
+
+    return VideoGrid(
+      videos: moviesForSelectedGenre,
+      scrollController: _scrollController,
     );
   }
 

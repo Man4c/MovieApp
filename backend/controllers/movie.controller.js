@@ -74,24 +74,6 @@ export const getAllMovies = async (req, res) => {
   }
 };
 
-export const getMovieTypes = async (req, res) => {
-  try {
-    // The 'type' field in movie.model.js is an array of strings.
-    // Movie.distinct('type') will return all unique strings from all 'type' arrays.
-    const types = await Movie.distinct("type");
-    res.status(200).json({
-      success: true,
-      data: types,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch movie types",
-      error: error.message,
-    });
-  }
-};
-
 export const getAllMovieByType = async (req, res) => {
   try {
     // This route might become redundant, but we'll keep it for now

@@ -40,22 +40,19 @@ class ApiService {
     throw _handleError(response);
   }
 
-  static Future<List<String>> getMovieTypes() async {
+  static Future<List<String>> getMovieTypes() async { // Or rename to getGenres()
     final response = await http.get(
-      Uri.parse('$baseUrl/movies/types/all'),
-      // Public route, so only Content-Type header might be needed,
-      // or none if server doesn't strictly require it for GET.
-      // For consistency, let's use a minimal header.
-      headers: {'Content-Type': 'application/json'},
+      Uri.parse('$baseUrl/genres'), // Updated endpoint
+      headers: {'Content-Type': 'application/json'}, // Keep headers as needed
     );
 
     if (response.statusCode == 200) {
       final responseData = json.decode(response.body);
-      // Backend sends { success: true, data: types }
-      final typesList = responseData['data'] as List?;
+      // New backend sends { success: true, genres: types }
+      final typesList = responseData['genres'] as List?; // Changed 'data' to 'genres'
       return List<String>.from(typesList ?? []);
     }
-    throw _handleError(response);
+    throw _handleError(response); // Existing error handling
   }
 
   static Future<UserModel> register(
