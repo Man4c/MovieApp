@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter_video_app/services/api_service.dart';
 import 'package:flutter_video_app/models/user_model.dart';
 
@@ -67,18 +68,40 @@ class AuthProvider with ChangeNotifier {
 
   Future<void> login(String email, String password) async {
     try {
-      final response = await ApiService.login(email, password);
-      await _handleAuthResponse(response);
+      final response = await http.post(
+        Uri.parse('${ApiService.baseUrl}/auth/login'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'email': email, 'password': password}),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        await _handleAuthResponse(data);
+      } else {
+        throw Exception('Failed to login: ${response.body}');
+      }
     } catch (e) {
+      print("Error in login provider: $e");
       rethrow;
     }
   }
 
   Future<void> register(String name, String email, String password) async {
     try {
-      final response = await ApiService.register(name, email, password);
-      await _handleAuthResponse(response);
+      final response = await http.post(
+        Uri.parse('${ApiService.baseUrl}/auth/signup'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'name': name, 'email': email, 'password': password}),
+      );
+
+      if (response.statusCode == 201) {
+        final data = json.decode(response.body);
+        await _handleAuthResponse(data);
+      } else {
+        throw Exception('Failed to register: ${response.body}');
+      }
     } catch (e) {
+      print("Error in register provider: $e");
       rethrow;
     }
   }

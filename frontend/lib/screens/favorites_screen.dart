@@ -12,6 +12,7 @@ class FavoritesScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final favoritesProvider = Provider.of<FavoritesProvider>(context);
     final List<VideoModel> favorites = favoritesProvider.favorites;
+    final ScrollController scrollController = ScrollController();
 
     if (favorites.isEmpty) {
       return Center(
@@ -35,6 +36,6 @@ class FavoritesScreen extends StatelessWidget {
         ),
       );
     }
-    return VideoGrid(videos: favorites);
+    return VideoGrid(videos: favorites, scrollController: scrollController);
   }
 }

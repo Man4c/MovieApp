@@ -40,8 +40,16 @@ class _FeaturedBannerCarouselState extends State<FeaturedBannerCarousel> {
   @override
   Widget build(BuildContext context) {
     if (widget.featuredVideos.isEmpty) {
+      print("FeaturedBannerCarousel: No videos provided");
       return const SizedBox.shrink();
     }
+
+    print(
+      "FeaturedBannerCarousel: Showing ${widget.featuredVideos.length} videos",
+    );
+    print(
+      "First video data: {title: ${widget.featuredVideos[0].title}, backdropPath: ${widget.featuredVideos[0].backdropPath}}",
+    );
 
     final screenWidth = MediaQuery.of(context).size.width;
     final bannerHeight = screenWidth * (9 / 16); // Rasio 16:9

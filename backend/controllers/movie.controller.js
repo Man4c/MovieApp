@@ -6,22 +6,20 @@ const mapMovieData = (movie) => ({
   title: movie.title,
   description: movie.description,
   thumbnailUrl: movie.posterPath,
-  backdropPath: movie.backdropPath,
+  backdropPath: movie.backdropPath || movie.posterPath, // Fallback to poster if no backdrop
   videoUrl: movie.videoUrl,
   categories: movie.genre,
-  type: movie.type,
+  type: Array.isArray(movie.type) ? movie.type : [movie.type].filter(Boolean), // Ensure type is always an array
   rating: movie.rating,
   releaseDate: movie.releaseDate,
   tags: movie.tags || [],
-  // Add other fields if necessary, ensuring to remove/handle _id if needed
 });
 
 export const getAllMovies = async (req, res) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const pageSize = 10; // Or another sensible default
     const searchQuery = req.query.search;
     const categoryQuery = req.query.category;
+    const loadAll = req.query.loadAll === "true";
 
     let query = {};
 
@@ -37,12 +35,16 @@ export const getAllMovies = async (req, res) => {
       query.type = { $regex: new RegExp(`^${categoryQuery}$`, "i") };
     }
 
-    const totalMovies = await Movie.countDocuments(query);
-    const totalPages = Math.ceil(totalMovies / pageSize);
+    let moviesQuery = Movie.find(query);
 
-    const moviesFromDB = await Movie.find(query)
-      .skip((page - 1) * pageSize)
-      .limit(pageSize);
+    // Only apply pagination if not loading all
+    if (!loadAll) {
+      const page = parseInt(req.query.page) || 1;
+      const pageSize = 10;
+      moviesQuery = moviesQuery.skip((page - 1) * pageSize).limit(pageSize);
+    }
+
+    const moviesFromDB = await moviesQuery;
 
     const mappedMovies = moviesFromDB.map(mapMovieData);
 
@@ -66,7 +68,7 @@ export const getMovieTypes = async (req, res) => {
   try {
     // The 'type' field in movie.model.js is an array of strings.
     // Movie.distinct('type') will return all unique strings from all 'type' arrays.
-    const types = await Movie.distinct('type');
+    const types = await Movie.distinct("type");
     res.status(200).json({
       success: true,
       data: types,

@@ -61,6 +61,8 @@ export const login = async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
     const token = generateToken(user._id);
+    console.log(token);
+    
     // No need to re-fetch user here if not creating, but ensure all fields are selected
     // If user.role or user.favorites might be excluded by .select('+password'), adjust if necessary
     // For now, assume they are available on 'user' object after findOne without explicit select for those

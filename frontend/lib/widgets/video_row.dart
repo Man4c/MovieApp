@@ -31,7 +31,13 @@ class VideoRow extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => GenreMoviesScreen(genreName: title),
+                    builder:
+                        (context) => GenreMoviesScreen(
+                          genreName: title,
+                          isType: videos.first.type.contains(
+                            title,
+                          ), // Check if this is a type row
+                        ),
                   ),
                 );
               },
@@ -52,7 +58,11 @@ class VideoRow extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => GenreMoviesScreen(genreName: title),
+                          builder:
+                              (context) => GenreMoviesScreen(
+                                genreName: title,
+                                isType: videos.first.type.contains(title),
+                              ),
                         ),
                       );
                     },

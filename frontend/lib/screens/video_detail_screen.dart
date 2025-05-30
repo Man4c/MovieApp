@@ -156,8 +156,8 @@ class _VideoDetailScreenState extends State<VideoDetailScreen> {
                           Row(
                             children: [
                               _buildInfoChip(
-                                widget.video.type.toUpperCase(),
-                                _getTypeColor(widget.video.type),
+                                widget.video.type.join(', ').toUpperCase(),
+                                _getTypeColor(widget.video.type.join(', ')),
                               ),
                               const SizedBox(width: 8),
                               _buildInfoChip(

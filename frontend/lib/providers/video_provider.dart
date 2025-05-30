@@ -20,15 +20,14 @@ class VideoProvider with ChangeNotifier {
   VideoProvider() {
     loadVideos();
   }
-
-  Future<void> loadVideos({bool refresh = false}) async {
+  Future<void> loadVideos({bool refresh = false, bool loadAll = false}) async {
     try {
-      if (refresh) {
+      if (refresh || loadAll) {
         _currentPage = 1;
-        _hasMorePages = true;
+        _hasMorePages = !loadAll;
       }
 
-      if (!_hasMorePages) return;
+      if (!_hasMorePages && !loadAll) return;
 
       _isLoading = true;
       notifyListeners();
@@ -36,7 +35,8 @@ class VideoProvider with ChangeNotifier {
       final videos = await ApiService.getVideos(
         category: _selectedCategory == "All" ? null : _selectedCategory,
         search: _searchQuery,
-        page: _currentPage,
+        page: loadAll ? null : _currentPage,
+        loadAll: loadAll,
       );
 
       if (refresh) {
@@ -82,7 +82,7 @@ class VideoProvider with ChangeNotifier {
         )
         .toList();
   }
-  
+
   List<String> getCategories() {
     Set<String> uniqueCategories = {};
     for (var video in _allVideos) {
@@ -116,5 +116,25 @@ class VideoProvider with ChangeNotifier {
     _currentPage = 1;
     _hasMorePages = true;
     notifyListeners();
+  }
+
+  List<VideoModel> getVideosByType(String typeName) {
+    if (typeName.toLowerCase() == 'all') {
+      return _allVideos;
+    }
+    return _allVideos
+        .where(
+          (video) =>
+              video.type.any((t) => t.toLowerCase() == typeName.toLowerCase()),
+        )
+        .toList();
+  }
+
+  List<String> getTypes() {
+    Set<String> uniqueTypes = {};
+    for (var video in _allVideos) {
+      uniqueTypes.addAll(video.type);
+    }
+    return uniqueTypes.toList()..sort();
   }
 }

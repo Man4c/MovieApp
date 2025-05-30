@@ -19,7 +19,8 @@ class ApiService {
     };
   }
 
-  static Future<UserModel> login( // Changed return type
+  static Future<UserModel> login(
+    // Changed return type
     String email,
     String password,
   ) async {
@@ -32,7 +33,9 @@ class ApiService {
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       _token = data['token'] as String?;
-      return UserModel.fromJson(data['user'] as Map<String, dynamic>); // Return UserModel
+      return UserModel.fromJson(
+        data['user'] as Map<String, dynamic>,
+      ); // Return UserModel
     }
     throw _handleError(response);
   }
@@ -55,13 +58,14 @@ class ApiService {
     throw _handleError(response);
   }
 
-  static Future<UserModel> register( // Changed return type
+  static Future<UserModel> register(
+    // Changed return type
     String name,
     String email,
     String password,
   ) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/auth/register'),
+      Uri.parse('$baseUrl/auth/signup'),
       headers: _headers,
       body: json.encode({'name': name, 'email': email, 'password': password}),
     );
@@ -69,7 +73,9 @@ class ApiService {
     if (response.statusCode == 201) {
       final data = json.decode(response.body);
       _token = data['token'] as String?;
-      return UserModel.fromJson(data['user'] as Map<String, dynamic>); // Return UserModel
+      return UserModel.fromJson(
+        data['user'] as Map<String, dynamic>,
+      ); // Return UserModel
     }
     throw _handleError(response);
   }
@@ -77,12 +83,14 @@ class ApiService {
   static Future<List<VideoModel>> getVideos({
     String? category,
     String? search,
-    int page = 1,
+    int? page,
+    bool loadAll = false,
   }) async {
     final queryParams = {
       if (category != null) 'category': category,
       if (search != null) 'search': search,
-      'page': page.toString(),
+      if (page != null) 'page': page.toString(),
+      'loadAll': loadAll.toString(),
     };
 
     final response = await http.get(

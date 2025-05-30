@@ -5,7 +5,7 @@ import 'package:flutter_video_app/widgets/video_card.dart';
 class VideoGrid extends StatelessWidget {
   final List<VideoModel> videos;
 
-  const VideoGrid({super.key, required this.videos});
+  const VideoGrid({super.key, required this.videos, required ScrollController scrollController});
 
   @override
   Widget build(BuildContext context) {
