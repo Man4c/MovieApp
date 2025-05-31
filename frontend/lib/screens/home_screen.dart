@@ -7,8 +7,8 @@ import 'package:flutter_video_app/screens/favorites_screen.dart';
 import 'package:flutter_video_app/screens/discovery_screen.dart';
 import 'package:flutter_video_app/widgets/video_row.dart';
 import 'package:flutter_video_app/widgets/featured_banner_carousel.dart';
+import 'package:flutter_video_app/widgets/video_card.dart';
 import 'package:flutter_video_app/utils/constants.dart';
-import 'package:flutter_video_app/screens/user_profile_screen.dart'; // Import UserProfileScreen
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -20,7 +20,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   final TextEditingController _searchController = TextEditingController();
   bool _isSearching = false;
-  final ScrollController _scrollController = ScrollController(); // Still used for search GridView scrolling if results are many
+  final ScrollController _scrollController = ScrollController();
 
   // State for categorized home screen
   final List<String> _homeScreenCategories = ["upcoming", "now_playing", "trending", "top_rated"];
@@ -61,13 +61,12 @@ class _HomeScreenState extends State<HomeScreen> {
       if (!mounted) return;
       setState(() {
         _isLoadingCategory[category] = false;
-        _categorizedVideos[category] = []; // Set to empty on error to avoid null issues
+        _categorizedVideos[category] = [];
       });
       debugPrint("Error fetching videos for $category: $e");
     }
   }
 
-  // Fetch videos for search
   Future<void> _fetchSearchResults(String searchTerm) async {
     if (!mounted) return;
     setState(() {
@@ -109,16 +108,12 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       _currentSearchTerm = null;
       _searchController.clear();
-      // _isSearching = false; // This will be set by the AppBar action
       _searchResults = [];
       _isLoadingSearch = false;
     });
-    // No need to fetch categorized videos here, they are already loaded or being loaded.
-    // Setting _isSearching to false will make _buildBody show the categorized view.
+  
   }
 
-  // _groupVideosByType is no longer needed for the main home screen display.
-  // It might be useful if search results were to be grouped, but current plan is a simple grid.
 
   @override
   Widget build(BuildContext context) {
@@ -140,7 +135,6 @@ class _HomeScreenState extends State<HomeScreen> {
           appBar: AppBar(
             backgroundColor: Colors.transparent,
             elevation: 0,
-            // leading: Builder( ... ) // REMOVED leading menu icon
             title: _isSearching
                 ? Container(
                     padding: const EdgeInsets.symmetric(horizontal: 8.0),
@@ -161,11 +155,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       style: const TextStyle(color: Colors.white, fontSize: 16),
-                      onChanged: _onSearchChanged, // Debounced search
+                      onChanged: _onSearchChanged,
                     ),
                   )
                 : Text(
-                        _getAppBarTitle(), // Use a helper method for title
+                        _getAppBarTitle(), 
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -332,7 +326,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     return RefreshIndicator(
       onRefresh: () async {
-        _initializeHomeScreen(); // Re-fetch all category data
+        _initializeHomeScreen(); 
       },
       child: SingleChildScrollView(
         // controller: _scrollController, // Main scroll controller for home screen rows if needed for other effects

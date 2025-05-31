@@ -2,8 +2,9 @@ import Movie from "../models/movie.model.js";
 
 export const getUniqueGenres = async (req, res) => {
   try {
-    const allTypes = await Movie.distinct("type");
-
+    const allTypes = await Movie.distinct("genre");
+    console.log(allTypes);
+    
     // Define special types used for HomeScreen ordering or other non-genre categories
     const homeScreenSpecificTypes = [
       "upcoming",
@@ -16,9 +17,7 @@ export const getUniqueGenres = async (req, res) => {
     ];
 
     // Filter out these special types and any null/empty strings
-    const uniqueGenres = allTypes.filter(
-      type => type && type.trim() !== "" && !homeScreenSpecificTypes.includes(type.toLowerCase())
-    );
+    const uniqueGenres = allTypes
 
     res.status(200).json({
       success: true,

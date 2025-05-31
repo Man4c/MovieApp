@@ -9,10 +9,10 @@ class GenreMoviesScreen extends StatelessWidget {
   final bool isType; // Whether we're filtering by type or category
 
   const GenreMoviesScreen({
-    Key? key,
+    super.key,
     required this.genreName,
     this.isType = false, // Default to category view
-  }) : super(key: key);
+  });
   @override
   Widget build(BuildContext context) {
     return Consumer<VideoProvider>(
@@ -77,6 +77,8 @@ class GenreMoviesScreen extends StatelessWidget {
                   ),
                 ],
               ),
+    );
+      },
     );
   }
 }
