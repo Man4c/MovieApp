@@ -19,9 +19,7 @@ class FavoritesProvider with ChangeNotifier {
     try {
       _isLoading = true;
       notifyListeners();
-      
       _favorites = await ApiService.getFavorites();
-      
       _isLoading = false;
       notifyListeners();
     } catch (e) {

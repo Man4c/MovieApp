@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_video_app/models/video_model.dart';
 import 'package:flutter_video_app/services/api_service.dart';
 import 'package:flutter_video_app/widgets/video_card.dart';
-import 'package:flutter_video_app/widgets/video_grid.dart'; // Using VideoGrid
+import 'package:flutter_video_app/widgets/video_grid.dart';
 import 'package:flutter_video_app/utils/constants.dart';
 
 class DiscoveryScreen extends StatefulWidget {
@@ -18,7 +18,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
   bool _isLoadingGenres = true;
   bool _isLoadingMovies = false;
   String? _selectedGenre;
-  ScrollController _scrollController = ScrollController(); // For VideoGrid
+  ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
@@ -39,7 +39,7 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
     try {
       final genres = await ApiService.getMovieTypes();
       setState(() {
-        _genres = genres.where((genre) => genre.isNotEmpty).toList(); // Filter out empty strings
+        _genres = genres.where((genre) => genre.isNotEmpty).toList();
         _isLoadingGenres = false;
       });
     } catch (e) {
@@ -56,13 +56,9 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
   }
 
   Future<void> _fetchMoviesByGenre(String genre) async {
-    // If movies for this genre are already fetched, don't fetch again unless necessary
-    // For simplicity here, we fetch every time, but could add caching.
     setState(() {
       _selectedGenre = genre;
       _isLoadingMovies = true;
-      // Clear previous movies for this genre to show loading indicator correctly
-      // _moviesByGenre[genre] = [];
     });
     try {
       final movies = await ApiService.getVideos(category: genre, loadAll: true);
@@ -76,7 +72,9 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
       });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load movies for $genre: ${e.toString()}')),
+          SnackBar(
+            content: Text('Failed to load movies for $genre: ${e.toString()}'),
+          ),
         );
       }
       debugPrint("Error fetching movies for $genre: $e");
@@ -87,100 +85,122 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      // appBar: AppBar(title: Text(Constants.discoveryScreenTitle)), // AppBar is in HomeScreen
-      body: SafeArea( // Added SafeArea
-        child: _isLoadingGenres
-            ? const Center(child: CircularProgressIndicator(color: Colors.deepOrange))
-            : Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildGenreSelector(), // This should take its natural height
-
-                  // This Expanded widget will contain either the loading indicator for movies,
-                  // the movie grid, or a message.
-                  Expanded(
-                    child: _buildMoviesArea(),
-                  ),
-                ],
-              ),
+      body: SafeArea(
+        child:
+            _isLoadingGenres
+                ? const Center(
+                  child: CircularProgressIndicator(color: Colors.deepOrange),
+                )
+                : _buildGenreList(),
       ),
     );
   }
 
-  Widget _buildMoviesArea() {
-    if (_isLoadingMovies) {
-      return const Center(child: CircularProgressIndicator(color: Colors.deepOrange));
-    }
-
-    if (_selectedGenre == null) {
-      if (_genres.isEmpty) { // No genres loaded at all
-        return const Center(
-          child: Text(
-            'No genres available at the moment. Pull to refresh or check connection.',
-            style: TextStyle(color: Colors.white70, fontSize: 16),
-            textAlign: TextAlign.center,
-          ),
-        );
-      }
-      return const Center( // Genres loaded, but none selected
+  Widget _buildGenreList() {
+    if (_genres.isEmpty) {
+      return const Center(
         child: Text(
-          'Select a genre to discover movies.',
+          'No genres available at the moment.',
           style: TextStyle(color: Colors.white70, fontSize: 16),
+          textAlign: TextAlign.center,
         ),
       );
     }
 
-    final moviesForSelectedGenre = _moviesByGenre[_selectedGenre!];
-
-    if (moviesForSelectedGenre == null || moviesForSelectedGenre.isEmpty) {
-      return Center(
-        child: Text(
-          'No movies found for "$_selectedGenre".',
-          style: const TextStyle(color: Colors.white70, fontSize: 16),
-        ),
-      );
-    }
-
-    return VideoGrid(
-      videos: moviesForSelectedGenre,
-      scrollController: _scrollController,
+    return ListView.builder(
+      itemCount: _genres.length,
+      itemBuilder: (context, index) {
+        final genre = _genres[index];
+        return _buildGenreCard(genre, index);
+      },
     );
   }
 
-  Widget _buildGenreSelector() {
-    if (_genres.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(16.0),
-        child: Center(child: Text('No genres available.', style: TextStyle(color: Colors.white70))),
-      );
-    }
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Wrap(
-        spacing: 8.0,
-        runSpacing: 4.0,
-        children: _genres.map((genre) {
-          final isSelected = _selectedGenre == genre;
-          return ChoiceChip(
-            label: Text(genre),
-            selected: isSelected,
-            onSelected: (selected) {
-              if (selected) {
-                _fetchMoviesByGenre(genre);
-              }
-            },
-            backgroundColor: Colors.grey[800],
-            selectedColor: Colors.deepOrange,
-            labelStyle: TextStyle(
-              color: isSelected ? Colors.white : Colors.white70,
+  Widget _buildGenreCard(String genre, int index) {
+    // Sample movie poster - you might want to get actual poster from your movies data
+    final movieForGenre =
+        _moviesByGenre[genre]?.isNotEmpty == true
+            ? _moviesByGenre[genre]!.first
+            : null;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      decoration: BoxDecoration(
+        color: Colors.grey[900],
+        borderRadius: BorderRadius.circular(12.0),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12.0),
+          onTap: () => _fetchMoviesByGenre(genre),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                // Movie Poster
+                Container(
+                  width: 60,
+                  height: 90,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8.0),
+                    color: Colors.grey[800],
+                  ),
+                  child:
+                      movieForGenre?.thumbnailUrl != null
+                          ? ClipRRect(
+                            borderRadius: BorderRadius.circular(8.0),
+                            child: Image.network(
+                              movieForGenre!.thumbnailUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return _buildPlaceholderPoster();
+                              },
+                            ),
+                          )
+                          : _buildPlaceholderPoster(),
+                ),
+
+                const SizedBox(width: 16.0),
+
+                // Genre Text
+                Expanded(
+                  child: Text(
+                    genre,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18.0,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+
+                // Arrow Icon
+                const Icon(
+                  Icons.arrow_forward_ios,
+                  color: Colors.white70,
+                  size: 20.0,
+                ),
+              ],
             ),
-            shape: StadiumBorder(
-              side: BorderSide(
-                color: isSelected ? Colors.deepOrange : Colors.grey[700]!,
-              ),
-            ),
-          );
-        }).toList(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPlaceholderPoster() {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8.0),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Colors.grey[700]!, Colors.grey[900]!],
+        ),
+      ),
+      child: const Center(
+        child: Icon(Icons.movie, color: Colors.white54, size: 30.0),
       ),
     );
   }

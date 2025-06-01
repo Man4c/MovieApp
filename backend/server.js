@@ -14,7 +14,7 @@ const PORT = process.env.PORT || 4002;
 // CORS configuration
 app.use(
   cors({
-    origin: "http://localhost:49968",
+    origin: "http://localhost:54792",
     credentials: true,
   })
 );
@@ -25,9 +25,9 @@ app.use(express.urlencoded());
 app.use("/api/auth", authRoutes);
 app.use("/api/movies", moviesRoutes);
 app.use("/api/users", userRoutes);
-app.use("/api/genres", genreRoutes); // Mount genre routes
+app.use("/api/genres", genreRoutes);
 
-app.listen(PORT, () => {
-  console.log(`Server Running in http://localhost:${PORT}`);
+app.listen(PORT,'0.0.0.0', () => {
+  console.log(`Server Running in Port :${PORT}`);
   connectDB();
 });

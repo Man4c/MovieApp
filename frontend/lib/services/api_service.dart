@@ -5,7 +5,7 @@ import 'package:flutter_video_app/models/review_model.dart';
 import 'package:flutter_video_app/models/user_model.dart'; // Added UserModel import
 
 class ApiService {
-  static const String baseUrl = 'http://localhost:4002/api';
+  static const String baseUrl = 'http://192.168.231.1:4002/api';
   static String? _token;
 
   static void setToken(String token) {
@@ -19,11 +19,7 @@ class ApiService {
     };
   }
 
-  static Future<UserModel> login(
-    // Changed return type
-    String email,
-    String password,
-  ) async {
+  static Future<UserModel> login(String email, String password) async {
     final response = await http.post(
       Uri.parse('$baseUrl/auth/login'),
       headers: _headers,
@@ -40,7 +36,8 @@ class ApiService {
     throw _handleError(response);
   }
 
-  static Future<List<String>> getMovieTypes() async { // Or rename to getGenres()
+  static Future<List<String>> getMovieTypes() async {
+    // Or rename to getGenres()
     final response = await http.get(
       Uri.parse('$baseUrl/genres'), // Updated endpoint
       headers: {'Content-Type': 'application/json'}, // Keep headers as needed
@@ -49,7 +46,8 @@ class ApiService {
     if (response.statusCode == 200) {
       final responseData = json.decode(response.body);
       // New backend sends { success: true, genres: types }
-      final typesList = responseData['genres'] as List?; // Changed 'data' to 'genres'
+      final typesList =
+          responseData['genres'] as List?; // Changed 'data' to 'genres'
       return List<String>.from(typesList ?? []);
     }
     throw _handleError(response); // Existing error handling
@@ -64,7 +62,11 @@ class ApiService {
     final response = await http.post(
       Uri.parse('$baseUrl/auth/signup'),
       headers: _headers,
-      body: json.encode({'username': name, 'email': email, 'password': password}),
+      body: json.encode({
+        'username': name,
+        'email': email,
+        'password': password,
+      }),
     );
 
     if (response.statusCode == 201) {

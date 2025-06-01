@@ -18,15 +18,61 @@ class VideoDetailScreen extends StatefulWidget {
   State<VideoDetailScreen> createState() => _VideoDetailScreenState();
 }
 
-class _VideoDetailScreenState extends State<VideoDetailScreen> {
+class _VideoDetailScreenState extends State<VideoDetailScreen>
+    with TickerProviderStateMixin {
   final TextEditingController _reviewController = TextEditingController();
   double _userRating = 0.0;
   bool _isSubmitting = false;
+  bool _isExpanded = false;
+  late AnimationController _animationController;
+  late AnimationController _ratingAnimationController;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _ratingScaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _ratingAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 200),
+      vsync: this,
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
+    _ratingScaleAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
+      CurvedAnimation(
+        parent: _ratingAnimationController,
+        curve: Curves.elasticOut,
+      ),
+    );
+    _animationController.forward();
+  }
 
   @override
   void dispose() {
     _reviewController.dispose();
+    _animationController.dispose();
+    _ratingAnimationController.dispose();
     super.dispose();
+  }
+
+  bool _shouldShowExpandButton(BuildContext context) {
+    final TextPainter textPainter = TextPainter(
+      text: TextSpan(
+        text: widget.video.description,
+        style: Theme.of(
+          context,
+        ).textTheme.bodyMedium?.copyWith(height: 1.6, fontSize: 15),
+      ),
+      maxLines: 3,
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.layout(maxWidth: MediaQuery.of(context).size.width - 40);
+    return textPainter.didExceedMaxLines;
   }
 
   Future<void> _submitReview(FavoritesProvider provider) async {
@@ -43,7 +89,20 @@ class _VideoDetailScreenState extends State<VideoDetailScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Review submitted successfully')),
+          SnackBar(
+            content: const Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Text('Review submitted successfully'),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
         );
         _reviewController.clear();
         setState(() => _userRating = 0.0);
@@ -51,7 +110,22 @@ class _VideoDetailScreenState extends State<VideoDetailScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error submitting review: ${e.toString()}')),
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.white),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text('Error submitting review: ${e.toString()}'),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+          ),
         );
       }
     } finally {
@@ -64,8 +138,32 @@ class _VideoDetailScreenState extends State<VideoDetailScreen> {
     return Consumer2<FavoritesProvider, AuthProvider>(
       builder: (context, favoritesProvider, authProvider, _) {
         if (!authProvider.isAuthenticated) {
-          return const Scaffold(
-            body: Center(child: Text('Please log in to view video details')),
+          return Scaffold(
+            body: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    Theme.of(context).scaffoldBackgroundColor,
+                  ],
+                ),
+              ),
+              child: const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.lock_outline, size: 64, color: Colors.grey),
+                    SizedBox(height: 16),
+                    Text(
+                      'Please log in to view video details',
+                      style: TextStyle(fontSize: 18, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           );
         }
 
@@ -82,239 +180,291 @@ class _VideoDetailScreenState extends State<VideoDetailScreen> {
 
               return CustomScrollView(
                 slivers: [
+                  // Enhanced App Bar with gradient overlay
                   SliverAppBar(
-                    expandedHeight: 220,
+                    expandedHeight: 280,
                     pinned: true,
+                    stretch: true,
+                    backgroundColor: Colors.transparent,
                     flexibleSpace: FlexibleSpaceBar(
-                      background: CachedNetworkImage(
-                        imageUrl: widget.video.backdropPath,
-                        fit: BoxFit.cover,
-                        placeholder:
-                            (context, url) => Container(
-                              color: Colors.grey[900],
-                              child: const Center(
-                                child: CircularProgressIndicator(),
+                      stretchModes: const [
+                        StretchMode.zoomBackground,
+                        StretchMode.blurBackground,
+                      ],
+                      background: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          CachedNetworkImage(
+                            imageUrl: widget.video.backdropPath,
+                            fit: BoxFit.cover,
+                            placeholder:
+                                (context, url) => Container(
+                                  color: Colors.grey[900],
+                                  child: const Center(
+                                    child: CircularProgressIndicator(),
+                                  ),
+                                ),
+                            errorWidget:
+                                (context, url, error) => Container(
+                                  color: Colors.grey[900],
+                                  child: const Icon(Icons.error, size: 48),
+                                ),
+                          ),
+                          // Gradient overlay
+                          Container(
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Colors.transparent,
+                                  Colors.black.withOpacity(0.7),
+                                ],
+                                stops: const [0.5, 1.0],
                               ),
                             ),
-                        errorWidget:
-                            (context, url, error) => Container(
-                              color: Colors.grey[900],
-                              child: const Icon(Icons.error),
-                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
 
                   SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Title and favorite button
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    child: FadeTransition(
+                      opacity: _fadeAnimation,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Theme.of(context).scaffoldBackgroundColor,
+                              Theme.of(
+                                context,
+                              ).scaffoldBackgroundColor.withOpacity(0.95),
+                            ],
+                          ),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(20),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Expanded(
-                                child: Text(
-                                  widget.video.title,
-                                  style: Theme.of(context).textTheme.titleLarge,
-                                ),
-                              ),
-                              IconButton(
-                                icon: Icon(
-                                  isFavorite
-                                      ? Icons.favorite
-                                      : Icons.favorite_border,
-                                  color: isFavorite ? Colors.red : null,
-                                ),
-                                onPressed: () async {
-                                  try {
-                                    await favoritesProvider.toggleFavorite(
-                                      widget.video,
-                                    );
-                                  } catch (e) {
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            'Error updating favorites: ${e.toString()}',
+                              // Title and favorite button with enhanced styling
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          widget.video.title,
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.titleLarge?.copyWith(
+                                            fontSize: 28,
+                                            fontWeight: FontWeight.bold,
+                                            letterSpacing: -0.5,
                                           ),
                                         ),
-                                      );
-                                    }
-                                  }
-                                },
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 8),
-
-                          Row(
-                            children: [
-                              _buildInfoChip(
-                                widget.video.type.join(', ').toUpperCase(),
-                                _getTypeColor(widget.video.type.join(', ')),
-                              ),
-                              const SizedBox(width: 8),
-                              _buildInfoChip(
-                                widget.video.categories.take(2).join(', '),
-                                Colors.blueGrey,
-                              ),
-                              const SizedBox(width: 8),
-                              _buildInfoChip(
-                                widget.video.releaseDate,
-                                Colors.purple,
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          // Rating
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.star,
-                                color: Colors.amber,
-                                size: 24,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                '${averageRating > 0 ? averageRating.toStringAsFixed(1) : widget.video.rating.toStringAsFixed(1)} / 5.0',
-                                style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Text(
-                                '(${reviews.length} reviews)',
-                                style: TextStyle(
-                                  color: Colors.grey[400],
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          // Description
-                          Text(
-                            'Description',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            widget.video.description,
-                            style: Theme.of(context).textTheme.bodyMedium,
-                          ),
-
-                          const SizedBox(height: 24),
-
-                          // Watch button
-                          ElevatedButton.icon(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder:
-                                      (context) =>
-                                          PlayerScreen(video: widget.video),
-                                ),
-                              );
-                            },
-                            icon: const Icon(Icons.play_circle_outline),
-                            label: const Text(Constants.watchNowButton),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor:
-                                  Theme.of(context).colorScheme.primary,
-                              foregroundColor: Colors.white,
-                              minimumSize: const Size(double.infinity, 50),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                          ),
-
-                          const SizedBox(height: 32),
-
-                          // Reviews section
-                          Text(
-                            'Reviews',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Add review section
-                          _buildAddReviewSection(context, favoritesProvider),
-
-                          const SizedBox(height: 16),
-
-                          // Reviews list
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting)
-                            const Center(
-                              child: Padding(
-                                padding: EdgeInsets.symmetric(vertical: 16),
-                                child: CircularProgressIndicator(),
-                              ),
-                            )
-                          else if (snapshot.hasError)
-                            Center(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                ),
-                                child: Column(
-                                  children: [
-                                    const Icon(
-                                      Icons.error_outline,
-                                      color: Colors.red,
-                                      size: 48,
+                                        const SizedBox(height: 4),
+                                        Container(
+                                          height: 3,
+                                          width: 60,
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              colors: [
+                                                Theme.of(
+                                                  context,
+                                                ).colorScheme.primary,
+                                                Theme.of(
+                                                  context,
+                                                ).colorScheme.secondary,
+                                              ],
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              2,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      'Error loading reviews: ${snapshot.error}',
-                                      style: TextStyle(color: Colors.red[300]),
-                                      textAlign: TextAlign.center,
+                                  ),
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color:
+                                              isFavorite
+                                                  ? Colors.red.withOpacity(0.3)
+                                                  : Colors.grey.withOpacity(
+                                                    0.2,
+                                                  ),
+                                          blurRadius: 8,
+                                          spreadRadius: 2,
+                                        ),
+                                      ],
                                     ),
-                                    TextButton(
-                                      onPressed: () {
-                                        setState(
-                                          () {},
-                                        ); // This will trigger a rebuild and retry
+                                    child: IconButton(
+                                      icon: AnimatedSwitcher(
+                                        duration: const Duration(
+                                          milliseconds: 300,
+                                        ),
+                                        child: Icon(
+                                          isFavorite
+                                              ? Icons.favorite
+                                              : Icons.favorite_border,
+                                          key: ValueKey(isFavorite),
+                                          color:
+                                              isFavorite
+                                                  ? Colors.red
+                                                  : Colors.grey,
+                                          size: 28,
+                                        ),
+                                      ),
+                                      onPressed: () async {
+                                        try {
+                                          await favoritesProvider
+                                              .toggleFavorite(widget.video);
+                                        } catch (e) {
+                                          if (mounted) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                  'Error updating favorites: ${e.toString()}',
+                                                ),
+                                                backgroundColor: Colors.red,
+                                                behavior:
+                                                    SnackBarBehavior.floating,
+                                              ),
+                                            );
+                                          }
+                                        }
                                       },
-                                      child: const Text('Retry'),
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 20),
+
+                              // Enhanced info chips
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: [
+                                  _buildEnhancedInfoChip(
+                                    widget.video.type
+                                        .take(1)
+                                        .join(', ')
+                                        .toUpperCase(),
+                                    _getTypeColor(widget.video.type.join(', ')),
+                                    Icons.movie_outlined,
+                                  ),
+                                  _buildEnhancedInfoChip(
+                                    widget.video.categories.take(2).join(', '),
+                                    Colors.blueGrey,
+                                    Icons.category_outlined,
+                                  ),
+                                  _buildEnhancedInfoChip(
+                                    widget.video.releaseDate,
+                                    Colors.purple,
+                                    Icons.calendar_today_outlined,
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 24),
+
+                              // Enhanced Rating Section
+                              _buildEnhancedRatingSection(
+                                averageRating,
+                                reviews.length,
+                              ),
+
+                              const SizedBox(height: 24),
+
+                              // Enhanced Description with expand/collapse
+                              _buildExpandableDescription(),
+
+                              const SizedBox(height: 32),
+
+                              // Enhanced Watch button
+                              Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Theme.of(context).colorScheme.primary,
+                                      Theme.of(context).colorScheme.secondary,
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(16),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.primary.withOpacity(0.3),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 6),
                                     ),
                                   ],
                                 ),
-                              ),
-                            )
-                          else if (reviews.isEmpty)
-                            Center(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                ),
-                                child: Text(
-                                  Constants.noReviewsMessage,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey[500],
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (context) => PlayerScreen(
+                                              video: widget.video,
+                                            ),
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(
+                                    Icons.play_circle_fill,
+                                    size: 24,
+                                  ),
+                                  label: const Text(
+                                    Constants.watchNowButton,
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.transparent,
+                                    foregroundColor: Colors.white,
+                                    shadowColor: Colors.transparent,
+                                    minimumSize: const Size(
+                                      double.infinity,
+                                      56,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
                                   ),
                                 ),
                               ),
-                            )
-                          else
-                            ...reviews.map(
-                              (review) => ReviewCard(review: review),
-                            ),
-                        ],
+
+                              const SizedBox(height: 40),
+
+                              // Enhanced Reviews section
+                              _buildReviewsSection(
+                                context,
+                                favoritesProvider,
+                                snapshot,
+                                reviews,
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -327,104 +477,480 @@ class _VideoDetailScreenState extends State<VideoDetailScreen> {
     );
   }
 
-  Widget _buildInfoChip(String label, Color color) {
+  Widget _buildEnhancedInfoChip(String label, Color color, IconData icon) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: color.withOpacity(0.5)),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: color.withOpacity(0.8),
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
+        gradient: LinearGradient(
+          colors: [color.withOpacity(0.1), color.withOpacity(0.05)],
         ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 16),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildAddReviewSection(
+  Widget _buildEnhancedRatingSection(double averageRating, int reviewCount) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Colors.amber.withOpacity(0.1),
+            Colors.orange.withOpacity(0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.amber.withOpacity(0.2)),
+      ),
+      child: Row(
+        children: [
+          ScaleTransition(
+            scale: _ratingScaleAnimation,
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.amber,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.amber.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.star, color: Colors.white, size: 24),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${averageRating > 0 ? averageRating.toStringAsFixed(1) : widget.video.rating.toStringAsFixed(1)} / 5.0',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    ...List.generate(5, (index) {
+                      final rating =
+                          averageRating > 0
+                              ? averageRating
+                              : widget.video.rating;
+                      return Icon(
+                        index < rating ? Icons.star : Icons.star_border,
+                        color: Colors.amber,
+                        size: 16,
+                      );
+                    }),
+                    const SizedBox(width: 8),
+                    Text(
+                      '($reviewCount reviews)',
+                      style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExpandableDescription() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              Icons.description_outlined,
+              color: Theme.of(context).colorScheme.primary,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Description',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          child: Text(
+            widget.video.description,
+            maxLines: _isExpanded ? null : 3,
+            overflow:
+                _isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(height: 1.6, fontSize: 15),
+          ),
+        ),
+        if (_shouldShowExpandButton(context))
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: GestureDetector(
+              onTap: () {
+                setState(() {
+                  _isExpanded = !_isExpanded;
+                });
+              },
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _isExpanded ? 'Show less' : 'Show more',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  AnimatedRotation(
+                    turns: _isExpanded ? 0.5 : 0,
+                    duration: const Duration(milliseconds: 300),
+                    child: Icon(
+                      Icons.keyboard_arrow_down,
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 20,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildReviewsSection(
+    BuildContext context,
+    FavoritesProvider favoritesProvider,
+    AsyncSnapshot<List<ReviewModel>> snapshot,
+    List<ReviewModel> reviews,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              Icons.rate_review_outlined,
+              color: Theme.of(context).colorScheme.primary,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Reviews & Ratings',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
+              ),
+            ),
+            const Spacer(),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '${reviews.length}',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 20),
+
+        // Enhanced Add review section
+        _buildEnhancedAddReviewSection(context, favoritesProvider),
+
+        const SizedBox(height: 24),
+
+        // Reviews list with loading states
+        if (snapshot.connectionState == ConnectionState.waiting)
+          _buildLoadingState()
+        else if (snapshot.hasError)
+          _buildErrorState(snapshot.error.toString())
+        else if (reviews.isEmpty)
+          _buildEmptyState()
+        else
+          Column(
+            children: [
+              ...reviews.map(
+                (review) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: ReviewCard(review: review),
+                ),
+              ),
+            ],
+          ),
+      ],
+    );
+  }
+
+  Widget _buildEnhancedAddReviewSection(
     BuildContext context,
     FavoritesProvider provider,
   ) {
-    return Card(
-      elevation: 2,
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            Theme.of(context).colorScheme.surface,
+            Theme.of(context).colorScheme.surface.withOpacity(0.8),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Add your review',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-
-            const SizedBox(height: 8),
-
-            // Star rating
             Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(5, (index) {
-                return IconButton(
-                  icon: Icon(
-                    index < _userRating ? Icons.star : Icons.star_border,
-                    color: Colors.amber,
-                    size: 32,
-                  ),
-                  onPressed:
-                      _isSubmitting
-                          ? null
-                          : () {
-                            setState(() {
-                              _userRating = index + 1;
-                            });
-                          },
-                );
-              }),
-            ),
-
-            const SizedBox(height: 8),
-
-            // Review text field
-            TextField(
-              controller: _reviewController,
-              maxLines: 3,
-              enabled: !_isSubmitting,
-              decoration: InputDecoration(
-                hintText: Constants.addReviewHint,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+              children: [
+                Icon(
+                  Icons.edit_outlined,
+                  color: Theme.of(context).colorScheme.primary,
+                  size: 20,
                 ),
+                const SizedBox(width: 8),
+                const Text(
+                  'Share your experience',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Enhanced star rating
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.amber.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(5, (index) {
+                  return GestureDetector(
+                    onTap:
+                        _isSubmitting
+                            ? null
+                            : () {
+                              setState(() {
+                                _userRating = index + 1.0;
+                              });
+                              _ratingAnimationController.forward().then((_) {
+                                _ratingAnimationController.reverse();
+                              });
+                            },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      margin: const EdgeInsets.symmetric(horizontal: 2),
+                      child: Icon(
+                        index < _userRating ? Icons.star : Icons.star_border,
+                        color: index < _userRating ? Colors.amber : Colors.grey,
+                        size: 32,
+                      ),
+                    ),
+                  );
+                }),
               ),
             ),
 
             const SizedBox(height: 16),
 
-            // Submit button
-            ElevatedButton(
-              onPressed:
-                  _isSubmitting ||
-                          _userRating == 0 ||
-                          _reviewController.text.isEmpty
-                      ? null
-                      : () => _submitReview(provider),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(double.infinity, 50),
+            // Enhanced review text field
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.outline.withOpacity(0.3),
+                ),
               ),
-              child:
-                  _isSubmitting
-                      ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                      : const Text(Constants.submitReviewButton),
+              child: TextField(
+                controller: _reviewController,
+                maxLines: 4,
+                enabled: !_isSubmitting,
+                decoration: InputDecoration(
+                  hintText: Constants.addReviewHint,
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.all(16),
+                  hintStyle: TextStyle(color: Colors.grey[400]),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // Enhanced submit button
+            Container(
+              decoration: BoxDecoration(
+                gradient:
+                    _userRating > 0 && _reviewController.text.isNotEmpty
+                        ? LinearGradient(
+                          colors: [
+                            Theme.of(context).colorScheme.primary,
+                            Theme.of(context).colorScheme.secondary,
+                          ],
+                        )
+                        : null,
+                color:
+                    _userRating == 0 || _reviewController.text.isEmpty
+                        ? Colors.grey[300]
+                        : null,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: ElevatedButton(
+                onPressed:
+                    _isSubmitting ||
+                            _userRating == 0 ||
+                            _reviewController.text.isEmpty
+                        ? null
+                        : () => _submitReview(provider),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  minimumSize: const Size(double.infinity, 50),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child:
+                    _isSubmitting
+                        ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                        : const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.send_outlined, size: 18),
+                            SizedBox(width: 8),
+                            Text(
+                              Constants.submitReviewButton,
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+              ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildLoadingState() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      child: const Center(
+        child: Column(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Loading reviews...'),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState(String error) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.red.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.red.withOpacity(0.3)),
+      ),
+      child: Column(
+        children: [
+          const Icon(Icons.error_outline, color: Colors.red, size: 48),
+          const SizedBox(height: 16),
+          Text(
+            'Error loading reviews: $error',
+            style: const TextStyle(color: Colors.red),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton.icon(
+            onPressed: () => setState(() {}),
+            icon: const Icon(Icons.refresh),
+            label: const Text('Retry'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Container(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        children: [
+          Icon(Icons.rate_review_outlined, size: 64, color: Colors.grey[400]),
+          const SizedBox(height: 16),
+          Text(
+            Constants.noReviewsMessage,
+            style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Be the first to share your thoughts!',
+            style: TextStyle(fontSize: 14, color: Colors.grey[500]),
+          ),
+        ],
       ),
     );
   }

@@ -23,7 +23,12 @@ class _HomeScreenState extends State<HomeScreen> {
   final ScrollController _scrollController = ScrollController();
 
   // State for categorized home screen
-  final List<String> _homeScreenCategories = ["upcoming", "now_playing", "trending", "top_rated"];
+  final List<String> _homeScreenCategories = [
+    "upcoming",
+    "now_playing",
+    "trending",
+    "top_rated",
+  ];
   Map<String, List<VideoModel>> _categorizedVideos = {};
   Map<String, bool> _isLoadingCategory = {};
 
@@ -51,7 +56,10 @@ class _HomeScreenState extends State<HomeScreen> {
       _isLoadingCategory[category] = true;
     });
     try {
-      final videos = await ApiService.getVideos(category: category, loadAll: true);
+      final videos = await ApiService.getVideos(
+        category: category,
+        loadAll: true,
+      );
       if (!mounted) return;
       setState(() {
         _categorizedVideos[category] = videos;
@@ -73,7 +81,10 @@ class _HomeScreenState extends State<HomeScreen> {
       _isLoadingSearch = true;
     });
     try {
-      final videos = await ApiService.getVideos(search: searchTerm, loadAll: true);
+      final videos = await ApiService.getVideos(
+        search: searchTerm,
+        loadAll: true,
+      );
       if (!mounted) return;
       setState(() {
         _searchResults = videos;
@@ -88,7 +99,6 @@ class _HomeScreenState extends State<HomeScreen> {
       debugPrint("Error fetching search results for $searchTerm: $e");
     }
   }
-
 
   void _onSearchChanged(String query) {
     if (query.isEmpty && _currentSearchTerm == null) return;
@@ -111,9 +121,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _searchResults = [];
       _isLoadingSearch = false;
     });
-  
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -132,103 +140,68 @@ class _HomeScreenState extends State<HomeScreen> {
 
         return Scaffold(
           backgroundColor: Colors.black,
-          appBar: AppBar(
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            title: _isSearching
-                ? Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8.0),
-                    ),
-                    child: TextField(
-                      controller: _searchController,
-                      autofocus: true,
-                      decoration: InputDecoration(
-                        hintText: Constants.searchHint,
-                        hintStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
-                        border: InputBorder.none,
-                        suffixIcon: IconButton(
-                          icon: Icon(Icons.clear, color: Colors.white.withOpacity(0.7)),
-                          onPressed: _clearSearch,
-                        ),
-                      ),
-                      style: const TextStyle(color: Colors.white, fontSize: 16),
-                      onChanged: _onSearchChanged,
-                    ),
-                  )
-                : Text(
-                        _getAppBarTitle(), 
+          appBar:
+              _currentIndex == 0
+                  ? null
+                  : AppBar(
+                    backgroundColor: Colors.transparent,
+                    elevation: 0,
+                    title: Text(
+                      _getAppBarTitle(),
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
                         fontSize: 24,
                       ),
                     ),
-            actions: [
-              if (_currentIndex == 0)
-                IconButton(
-                  icon: Icon(
-                    _isSearching ? Icons.close : Icons.search,
-                    color: Colors.white,
-                  ),
-                  onPressed: () {
-                    setState(() {
-                      _isSearching = !_isSearching;
-                      if (!_isSearching) {
-                  _clearSearch();
-                  // When closing search, ensure home categories are visible if not already loaded.
-                  // However, _initializeHomeScreen should handle initial load.
-                  // If returning to home and categories are empty, a refresh might be desired.
-                  // For now, _clearSearch just clears search state.
-                      } else {
-                        // Optionally focus search field if needed
-                      }
-                    });
-                  },
-                ),
-              // PopupMenuButton for logout is removed as logout is now in Drawer.
-              Builder( // Use Builder to get correct context for Scaffold.of
-                builder: (context) {
-                  // final authProvider = Provider.of<AuthProvider>(context); // Already available from Consumer
-                  final user = authProvider.user;
-                  String userInitial = 'G'; // Guest/Generic
-                  if (user != null && user.name.isNotEmpty) {
-                    userInitial = user.name[0].toUpperCase();
-                  }
+                    actions: [
+                      Builder(
+                        builder: (context) {
+                          final user = authProvider.user;
+                          String userInitial = 'G';
+                          if (user != null && user.name.isNotEmpty) {
+                            userInitial = user.name[0].toUpperCase();
+                          }
 
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 10.0), // Add some padding
-                    child: IconButton(
-                      icon: CircleAvatar(
-                        radius: 18, // Adjust size
-                        backgroundColor: Colors.deepOrange.withOpacity(0.8),
-                        child: Text(userInitial, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                        // backgroundImage: user?.profilePhotoUrl != null ? NetworkImage(user!.profilePhotoUrl!) : null, // If photo URL existed
+                          return Padding(
+                            padding: const EdgeInsets.only(right: 10.0),
+                            child: IconButton(
+                              icon: CircleAvatar(
+                                radius: 18,
+                                backgroundColor: Colors.deepOrange.withOpacity(
+                                  0.8,
+                                ),
+                                child: Text(
+                                  userInitial,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              tooltip: 'Open navigation menu',
+                              onPressed: () {
+                                Scaffold.of(context).openDrawer();
+                              },
+                            ),
+                          );
+                        },
                       ),
-                      tooltip: 'Open navigation menu',
-                      onPressed: () {
-                        Scaffold.of(context).openDrawer();
-                      },
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
+                    ],
+                  ),
           body: _buildBody(),
           bottomNavigationBar: BottomNavigationBar(
             currentIndex: _currentIndex,
             onTap: (index) {
               setState(() {
                 _currentIndex = index;
-            if (_isSearching) { // If was searching, clear it when changing tabs
-              _isSearching = false;
-              _clearSearch();
+                if (_isSearching) {
+                  // If was searching, clear it when changing tabs
+                  _isSearching = false;
+                  _clearSearch();
                 }
-            // No specific fetch needed here for home categories as they load on initState.
-            // Discovery and Favorites manage their own loading.
+                // No specific fetch needed here for home categories as they load on initState.
+                // Discovery and Favorites manage their own loading.
               });
             },
             backgroundColor: Colors.black,
@@ -237,7 +210,10 @@ class _HomeScreenState extends State<HomeScreen> {
             type: BottomNavigationBarType.fixed,
             items: const [
               BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-              BottomNavigationBarItem(icon: Icon(Icons.explore), label: 'Discovery'), // New Item
+              BottomNavigationBarItem(
+                icon: Icon(Icons.explore),
+                label: 'Discovery',
+              ), // New Item
               BottomNavigationBarItem(
                 icon: Icon(Icons.favorite),
                 label: 'Favorites',
@@ -264,18 +240,98 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildBody() {
     // Handle tab changes for body content
-    if (_currentIndex == 1) { // Discovery Screen
+    if (_currentIndex == 1) {
+      // Discovery Screen
       return const DiscoveryScreen();
-    } else if (_currentIndex == 2) { // Favorites Screen
+    } else if (_currentIndex == 2) {
+      // Favorites Screen
       return const FavoritesScreen();
-    }
-    // Default is Home Screen (index 0)
+    } // Default is Home Screen (index 0)
+    return SafeArea(
+      child: Column(
+        children: [
+          // Welcome Header dan Search Bar untuk Home screen
+          if (_currentIndex == 0) _buildHomeHeader(),
 
-    // Search results view takes precedence if searching on Home tab
-    if (_currentIndex == 0 && _isSearching && _currentSearchTerm != null && _currentSearchTerm!.isNotEmpty) {
-      // Search Results View
+          // Content Area
+          Expanded(child: _buildHomeContent()),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHomeHeader() {
+    final user = Provider.of<AuthProvider>(context).user;
+    String userName = user?.name ?? 'Guest';
+    return Container(
+      color: Colors.transparent,
+      padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Welcome, $userName',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          Text(
+            'What to Watch',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.7),
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // Search Bar
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(25.0),
+            ),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search',
+                hintStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
+                prefixIcon: Icon(
+                  Icons.search,
+                  color: Colors.white.withOpacity(0.6),
+                ),
+                suffixIcon:
+                    _currentSearchTerm != null && _currentSearchTerm!.isNotEmpty
+                        ? IconButton(
+                          icon: Icon(
+                            Icons.clear,
+                            color: Colors.white.withOpacity(0.6),
+                          ),
+                          onPressed: _clearSearch,
+                        )
+                        : null,
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 15,
+                ),
+              ),
+              style: const TextStyle(color: Colors.white, fontSize: 16),
+              onChanged: _onSearchChanged,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHomeContent() {
+    if (_currentSearchTerm != null && _currentSearchTerm!.isNotEmpty) {
       if (_isLoadingSearch && _searchResults.isEmpty) {
-        return const Center(child: CircularProgressIndicator(color: Colors.deepOrange));
+        return const Center(
+          child: CircularProgressIndicator(color: Colors.deepOrange),
+        );
       }
       if (_searchResults.isEmpty) {
         return Center(
@@ -286,7 +342,6 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       }
       return GridView.builder(
-        // controller: _scrollController, // Use if search results can be very long and need separate scroll state
         padding: const EdgeInsets.all(8.0),
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 2,
@@ -302,53 +357,78 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    // Default Home View (index 0, not searching)
-    // Check if any category is still loading or if all are loaded and empty
-    bool anyCategoryLoading = _isLoadingCategory.values.any((isLoading) => isLoading);
-    bool allCategoriesLoadedAndEmpty = !anyCategoryLoading && _categorizedVideos.values.every((list) => list.isEmpty);
+    // Default Home Content (existing logic)
+    bool anyCategoryLoading = _isLoadingCategory.values.any(
+      (isLoading) => isLoading,
+    );
+    bool allCategoriesLoadedAndEmpty =
+        !anyCategoryLoading &&
+        _categorizedVideos.values.every((list) => list.isEmpty);
 
-    if (anyCategoryLoading && _categorizedVideos.values.every((list) => list.isEmpty)) {
-        return const Center(child: CircularProgressIndicator(color: Colors.deepOrange));
+    if (anyCategoryLoading &&
+        _categorizedVideos.values.every((list) => list.isEmpty)) {
+      return const Center(
+        child: CircularProgressIndicator(color: Colors.deepOrange),
+      );
     }
     if (allCategoriesLoadedAndEmpty) {
-        return Center(
-          child: Text(
-            'No movies available at the moment. Pull to refresh.',
-            style: const TextStyle(color: Colors.white70, fontSize: 16),
-            textAlign: TextAlign.center,
-          ),
-        );
+      return Center(
+        child: Text(
+          'No movies available at the moment. Pull to refresh.',
+          style: const TextStyle(color: Colors.white70, fontSize: 16),
+          textAlign: TextAlign.center,
+        ),
+      );
     }
 
-    List<VideoModel> featuredVideos = _categorizedVideos['trending'] ??
-                                     _categorizedVideos.values.firstWhere((v) => v.isNotEmpty, orElse: () => []);
-
+    List<VideoModel> featuredVideos =
+        _categorizedVideos['trending'] ??
+        _categorizedVideos.values.firstWhere(
+          (v) => v.isNotEmpty,
+          orElse: () => [],
+        );
 
     return RefreshIndicator(
       onRefresh: () async {
-        _initializeHomeScreen(); 
+        _initializeHomeScreen();
       },
       child: SingleChildScrollView(
-        // controller: _scrollController, // Main scroll controller for home screen rows if needed for other effects
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (featuredVideos.isNotEmpty)
-              FeaturedBannerCarousel(featuredVideos: featuredVideos.take(5).toList()),
+              FeaturedBannerCarousel(
+                featuredVideos: featuredVideos.take(5).toList(),
+              ),
 
             ..._homeScreenCategories.map((category) {
               final videosForCategory = _categorizedVideos[category];
               final isLoading = _isLoadingCategory[category] ?? false;
 
-              if (isLoading && (videosForCategory == null || videosForCategory.isEmpty)) {
+              if (isLoading &&
+                  (videosForCategory == null || videosForCategory.isEmpty)) {
                 return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 8.0),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 16.0,
+                    horizontal: 8.0,
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(category.replaceAll('_', ' ').toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                      Text(
+                        category.replaceAll('_', ' ').toUpperCase(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       const SizedBox(height: 12),
-                      const Center(child: CircularProgressIndicator(color: Colors.deepOrange)),
+                      const Center(
+                        child: CircularProgressIndicator(
+                          color: Colors.deepOrange,
+                        ),
+                      ),
                       const SizedBox(height: 16),
                     ],
                   ),
@@ -356,12 +436,14 @@ class _HomeScreenState extends State<HomeScreen> {
               }
 
               if (videosForCategory != null && videosForCategory.isNotEmpty) {
-                // Use category.replaceAll to make titles more readable if they have underscores
-                return VideoRow(title: category.replaceAll('_', ' ').toUpperCase(), videos: videosForCategory);
+                return VideoRow(
+                  title: category.replaceAll('_', ' ').toUpperCase(),
+                  videos: videosForCategory,
+                );
               }
               return const SizedBox.shrink();
             }).toList(),
-            const SizedBox(height: 16), // Padding at the bottom
+            const SizedBox(height: 16),
           ],
         ),
       ),
