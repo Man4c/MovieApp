@@ -5,6 +5,8 @@ import 'package:flutter_video_app/providers/auth_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_video_app/screens/favorites_screen.dart';
 import 'package:flutter_video_app/screens/discovery_screen.dart';
+import 'package:flutter_video_app/screens/user_profile_screen.dart'; // Added import
+import 'package:flutter_video_app/screens/login_screen.dart'; // Added import
 import 'package:flutter_video_app/widgets/video_row.dart';
 import 'package:flutter_video_app/widgets/featured_banner_carousel.dart';
 import 'package:flutter_video_app/widgets/video_card.dart';
@@ -141,55 +143,25 @@ class _HomeScreenState extends State<HomeScreen> {
 
         return Scaffold(
           backgroundColor: Colors.black,
-          appBar:
-              _currentIndex == 0
-                  ? null
-                  : AppBar(
-                    backgroundColor: Colors.transparent,
-                    elevation: 0,
-                    title: Text(
-                      _getAppBarTitle(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 24,
-                      ),
+          appBar: _currentIndex == 0
+              ? null
+              : AppBar(
+                  backgroundColor: Colors.transparent,
+                  elevation: 0,
+                  title: Text(
+                    _getAppBarTitle(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 24,
                     ),
-                    actions: [
-                      Builder(
-                        builder: (context) {
-                          final user = authProvider.user;
-                          String userInitial = 'G';
-                          if (user != null && user.name.isNotEmpty) {
-                            userInitial = user.name[0].toUpperCase();
-                          }
-
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 10.0),
-                            child: IconButton(
-                              icon: CircleAvatar(
-                                radius: 18,
-                                backgroundColor: Colors.deepOrange.withOpacity(
-                                  0.8,
-                                ),
-                                child: Text(
-                                  userInitial,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              tooltip: 'Open navigation menu',
-                              onPressed: () {
-                                Scaffold.of(context).openDrawer();
-                              },
-                            ),
-                          );
-                        },
-                      ),
-                    ],
                   ),
+                  // The actions for AppBar are removed here if CircleAvatar was for profile,
+                  // as drawer will handle profile access. If it was for openDrawer,
+                  // AppBar automatically adds a drawer icon if Scaffold.drawer is present.
+                  // The existing IconButton was in actions, let's rely on automatic leading icon.
+                ),
+          drawer: _buildAppDrawer(context, authProvider), // Added drawer
           body: _buildBody(),
           bottomNavigationBar: BottomNavigationBar(
             currentIndex: _currentIndex,
@@ -447,6 +419,88 @@ class _HomeScreenState extends State<HomeScreen> {
             const SizedBox(height: 16),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildAppDrawer(BuildContext context, AuthProvider authProvider) {
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: <Widget>[
+          if (authProvider.isAuthenticated && authProvider.user != null)
+            UserAccountsDrawerHeader(
+              accountName: Text(authProvider.user!.name),
+              accountEmail: Text(authProvider.user!.email),
+              currentAccountPicture: CircleAvatar(
+                backgroundColor: Colors.orange,
+                child: Text(
+                  authProvider.user!.name.isNotEmpty
+                      ? authProvider.user!.name[0].toUpperCase()
+                      : "U",
+                  style: const TextStyle(fontSize: 40.0, color: Colors.white),
+                ),
+              ),
+              decoration: const BoxDecoration(
+                color: Colors.deepOrange,
+              ),
+            )
+          else
+            DrawerHeader(
+              decoration: const BoxDecoration(
+                color: Colors.deepOrange,
+              ),
+              child: const Text(
+                'Menu',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                ),
+              ),
+            ),
+          if (authProvider.isAuthenticated) ...[
+            ListTile(
+              leading: const Icon(Icons.person_outline),
+              title: const Text('Profile'),
+              onTap: () {
+                Navigator.pop(context); // Close drawer
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const UserProfileScreen()),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.logout),
+              title: const Text('Logout'),
+              onTap: () async {
+                Navigator.pop(context); // Close drawer
+                await authProvider.logout();
+                // Optional: Explicit navigation if root navigator doesn't handle it fast enough
+                // or if on a nested navigator.
+                // if (mounted) {
+                //   Navigator.of(context).pushAndRemoveUntil(
+                //     MaterialPageRoute(builder: (context) => const LoginScreen()),
+                //     (Route<dynamic> route) => false);
+                // }
+              },
+            ),
+          ] else ...[
+            ListTile(
+              leading: const Icon(Icons.login),
+              title: const Text('Login'),
+              onTap: () {
+                Navigator.pop(context); // Close drawer
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                  (Route<dynamic> route) => false,
+                );
+              },
+            ),
+          ],
+        ],
       ),
     );
   }

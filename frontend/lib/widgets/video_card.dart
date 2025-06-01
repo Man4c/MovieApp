@@ -90,8 +90,20 @@ class _VideoCardState extends State<VideoCard> {
                       iconSize: 20.0, // Smaller icon size
                       padding: EdgeInsets.zero, // Remove default padding
                       constraints: const BoxConstraints(), // Remove default constraints
-                      onPressed: () {
-                        favoritesProvider.toggleFavorite(widget.video);
+                      onPressed: () async { // Make async
+                        try {
+                          await favoritesProvider.toggleFavorite(widget.video); // Add await
+                        } catch (e) {
+                          // Use 'context' from the Consumer's builder
+                          if (mounted) { // Check if mounted (StatefulWidget)
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Error updating favorite: ${e.toString()}'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
                       },
                     ),
                   ),

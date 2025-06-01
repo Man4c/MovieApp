@@ -23,10 +23,20 @@ export const protectRoute = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = User.findById(decoded.userId);
-    req.user = user;
+    const user = await User.findById(decoded.userId).select("-password"); // Added await and deselected password
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "User for this token not found.", // More concise message
+        error: "USER_TOKEN_NOT_FOUND", // More specific error code
+      });
+    }
+
+    req.user = user; // req.user will now be the actual user document
     next();
   } catch (error) {
+    // Existing error handling for TokenExpiredError, JsonWebTokenError etc. remains
     if (error.name === "TokenExpiredError") {
       return res.status(401).json({
         success: false,
@@ -46,9 +56,11 @@ export const protectRoute = async (req, res, next) => {
         error: "TOKEN_NOT_ACTIVE",
       });
     } else {
+      // Log the actual error for debugging on the server if it's unexpected
+      console.error("Token verification unexpected error:", error);
       return res.status(500).json({
         success: false,
-        message: "Token verification failed",
+        message: "Token verification failed", // Keep generic for client
         error: "TOKEN_VERIFICATION_FAILED",
       });
     }
