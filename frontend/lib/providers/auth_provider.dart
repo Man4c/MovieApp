@@ -117,16 +117,27 @@ class AuthProvider with ChangeNotifier {
 
   Future<void> logout() async {
     try {
-      // Call logout endpoint if your API has one
-      // await ApiService.logout();
+      // Make an HTTP POST request to the backend logout endpoint
+      if (_token != null) { // Only attempt logout if there's a token
+        await http.post(
+          Uri.parse('${ApiService.baseUrl}/auth/logout'),
+          headers: ApiService._headers,
+        );
+        // Note: Backend logout clears a cookie. The request is sent with credentials.
+        // We don't strictly need to check response.statusCode == 200 here,
+        // as we want to clear local state regardless.
+        // However, you might want to log if the status code is not 200.
+        print('Logout request sent to backend.');
+      }
     } catch (e) {
-      print('Error during logout: $e');
+      // Log the error, but still proceed to clear local state
+      print('Error during backend logout API call: $e');
     } finally {
       _token = null;
       _user = null;
       _isAuthenticated = false;
-      ApiService.setToken('');
-      await _clearAuthState();
+      ApiService.setToken(''); // Clear token in ApiService
+      await _clearAuthState(); // Clear token and user from SharedPreferences
       notifyListeners();
     }
   }

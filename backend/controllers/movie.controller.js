@@ -32,7 +32,7 @@ export const getAllMovies = async (req, res) => {
 
     if (categoryQuery) {
       // Assuming movie.type is an array of strings
-      query.type = { $regex: new RegExp(`^${categoryQuery}$`, "i") };
+      query.genre = { $elemMatch: { $regex: new RegExp(`^${categoryQuery}$`, "i") } };
     }
 
     let moviesQuery = Movie.find(query);

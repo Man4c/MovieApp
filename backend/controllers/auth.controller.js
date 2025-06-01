@@ -82,3 +82,20 @@ export const login = async (req, res) => {
     res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
+
+export const logout = async (req, res) => {
+  try {
+    // Clear the JWT cookie
+    res.cookie("jwt", "", {
+      httpOnly: true,
+      expires: new Date(0), // Set expiration date to the past
+      secure: process.env.NODE_ENV !== "development", // Use secure cookies in production
+      sameSite: "strict",
+    });
+
+    res.status(200).json({ message: "Logged out successfully" });
+  } catch (error) {
+    console.error("Logout error:", error);
+    res.status(500).json({ message: "Server Error", error: error.message });
+  }
+};
