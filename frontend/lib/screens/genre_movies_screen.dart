@@ -7,26 +7,44 @@ import '../widgets/video_grid.dart';
 class GenreMoviesScreen extends StatelessWidget {
   final String genreName;
   final bool isType; // Whether we're filtering by type or category
+  final List<VideoModel>? initialMovies; // New field
 
   const GenreMoviesScreen({
     super.key,
     required this.genreName,
     this.isType = false, // Default to category view
+    this.initialMovies, // New parameter
   });
+
   @override
   Widget build(BuildContext context) {
     return Consumer<VideoProvider>(
       builder: (context, videoProvider, _) {
-        // Load all videos when entering this screen
-        if (!videoProvider.isLoading && videoProvider.allVideos.isEmpty) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            videoProvider.loadVideos(refresh: true, loadAll: true);
-          });
+        List<VideoModel> movies;
+        bool providerLogicNeeded = false;
+
+        if (widget.initialMovies != null && widget.initialMovies!.isNotEmpty) {
+          movies = widget.initialMovies!;
+        } else {
+          providerLogicNeeded = true;
+          // Existing logic to fetch from VideoProvider
+          movies = widget.isType
+              ? videoProvider.getVideosByType(widget.genreName)
+              : videoProvider.getVideosByCategory(widget.genreName);
         }
 
-        final List<VideoModel> movies = isType
-            ? videoProvider.getVideosByType(genreName)
-            : videoProvider.getVideosByCategory(genreName);
+        // Load all videos from provider if initialMovies are not provided and provider hasn't loaded yet
+        if (providerLogicNeeded && !videoProvider.isLoading && videoProvider.allVideos.isEmpty) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            // This will trigger a fetch that VideoProvider handles,
+            // and Consumer will rebuild when data changes.
+            videoProvider.loadVideos(refresh: true, loadAll: true);
+          });
+          // If provider is loading and initialMovies are not present,
+          // movies list might be empty initially.
+          // The UI below handles this by showing 'No videos found' or VideoGrid.
+        }
+
         final ScrollController scrollController = ScrollController();
     return Scaffold(
       backgroundColor: Colors.black,

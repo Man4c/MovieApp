@@ -84,12 +84,14 @@ class ApiService {
     String? search,
     int? page,
     bool loadAll = false,
+    String? filterType, // Added filterType parameter
   }) async {
     final queryParams = {
       if (category != null) 'category': category,
       if (search != null) 'search': search,
       if (page != null) 'page': page.toString(),
       'loadAll': loadAll.toString(),
+      if (filterType != null) 'filterType': filterType, // Added filterType to queryParams
     };
 
     final response = await http.get(

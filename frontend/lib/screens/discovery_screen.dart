@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_video_app/models/video_model.dart';
 import 'package:flutter_video_app/services/api_service.dart';
-import 'package:flutter_video_app/widgets/video_card.dart';
-import 'package:flutter_video_app/widgets/video_grid.dart';
+// import 'package:flutter_video_app/widgets/video_card.dart'; // Not directly used in this file after changes
+// import 'package:flutter_video_app/widgets/video_grid.dart'; // Not directly used in this file after changes
 import 'package:flutter_video_app/utils/constants.dart';
+import 'package:flutter_video_app/screens/genre_movies_screen.dart'; // Import GenreMoviesScreen
 
 class DiscoveryScreen extends StatefulWidget {
   const DiscoveryScreen({super.key});
@@ -61,21 +62,44 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
       _isLoadingMovies = true;
     });
     try {
-      final movies = await ApiService.getVideos(category: genre, loadAll: true);
+      final movies = await ApiService.getVideos(
+        category: genre,
+        loadAll: true,
+        filterType: 'genre', // Specify filterType as genre
+      );
       setState(() {
         _moviesByGenre[genre] = movies;
-        _isLoadingMovies = false;
+        // _isLoadingMovies = false; // Set to false after navigation or if navigation fails
       });
-    } catch (e) {
-      setState(() {
-        _isLoadingMovies = false;
-      });
+
+      // Navigate to GenreMoviesScreen after fetching
       if (mounted) {
+        // Set isLoadingMovies to false before navigating or if navigation is conditional
+        setState(() {
+          _isLoadingMovies = false;
+        });
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => GenreMoviesScreen(
+              genreName: genre,
+              initialMovies: movies,
+              isType: false, // We are selecting by genre
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) { // Ensure mounted before setState
+        setState(() {
+          _isLoadingMovies = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to load movies for $genre: ${e.toString()}'),
           ),
         );
+      });
       }
       debugPrint("Error fetching movies for $genre: $e");
     }

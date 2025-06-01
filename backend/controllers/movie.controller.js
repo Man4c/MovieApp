@@ -19,6 +19,7 @@ export const getAllMovies = async (req, res) => {
   try {
     const searchQuery = req.query.search;
     const categoryQuery = req.query.category;
+    const filterType = req.query.filterType; // New
     const loadAll = req.query.loadAll === "true";
 
     let query = {};
@@ -30,9 +31,13 @@ export const getAllMovies = async (req, res) => {
       ];
     }
 
+    // This replaces the previous 'if (categoryQuery)' block
     if (categoryQuery) {
-      // Assuming movie.type is an array of strings
-      query.genre = { $elemMatch: { $regex: new RegExp(`^${categoryQuery}$`, "i") } };
+      if (filterType === 'genre') {
+        query.genre = { $elemMatch: { $regex: new RegExp(`^${categoryQuery}$`, "i") } };
+      } else { // Defaults to 'type' filtering if filterType is 'type', undefined, or any other value
+        query.type = { $elemMatch: { $regex: new RegExp(`^${categoryQuery}$`, "i") } };
+      }
     }
 
     let moviesQuery = Movie.find(query);

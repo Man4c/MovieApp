@@ -59,6 +59,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final videos = await ApiService.getVideos(
         category: category,
         loadAll: true,
+        filterType: 'type', // Added filterType
       );
       if (!mounted) return;
       setState(() {
