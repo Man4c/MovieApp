@@ -1,4 +1,3 @@
-// Removed Provider imports as it's no longer used here directly
 import 'package:flutter/material.dart';
 
 class CategorySelector extends StatelessWidget {
@@ -15,17 +14,16 @@ class CategorySelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // No longer uses Provider here, categories and selectedCategory come from constructor
     return Container(
-      height: MediaQuery.of(context).size.height * 0.07, // Responsive height
+      height: MediaQuery.of(context).size.height * 0.07,
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        itemCount: categories.length, // Use widget.categories
+        itemCount: categories.length,
         padding: const EdgeInsets.symmetric(horizontal: 8),
         itemBuilder: (context, index) {
-          final category = categories[index]; // Use widget.categories
-          final isSelected = category == selectedCategory; // Use widget.selectedCategory
+          final category = categories[index]; 
+          final isSelected = category == selectedCategory; 
 
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -33,7 +31,7 @@ class CategorySelector extends StatelessWidget {
               color: Colors.transparent,
               child: InkWell(
                 onTap: () {
-                  onCategorySelected(category); // Call the callback
+                  onCategorySelected(category); 
                 },
                 borderRadius: BorderRadius.circular(20),
                 child: Container(

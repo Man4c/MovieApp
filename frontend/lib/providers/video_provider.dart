@@ -20,7 +20,12 @@ class VideoProvider with ChangeNotifier {
   VideoProvider() {
     loadVideos();
   }
-  Future<void> loadVideos({bool refresh = false, bool loadAll = false}) async {
+  Future<void> loadVideos({
+    bool refresh = false,
+    bool loadAll = false,
+    String? category,
+    String? filterType,
+  }) async {
     try {
       if (refresh || loadAll) {
         _currentPage = 1;
@@ -31,12 +36,13 @@ class VideoProvider with ChangeNotifier {
 
       _isLoading = true;
       notifyListeners();
-
       final videos = await ApiService.getVideos(
-        category: _selectedCategory == "All" ? null : _selectedCategory,
+        category:
+            category ?? (_selectedCategory == "All" ? null : _selectedCategory),
         search: _searchQuery,
         page: loadAll ? null : _currentPage,
         loadAll: loadAll,
+        filterType: filterType,
       );
 
       if (refresh) {
@@ -118,14 +124,11 @@ class VideoProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  List<VideoModel> getVideosByType(String typeName) {
-    if (typeName.toLowerCase() == 'all') {
-      return _allVideos;
-    }
+  List<VideoModel> getVideosByType(String type) {
     return _allVideos
         .where(
           (video) =>
-              video.type.any((t) => t.toLowerCase() == typeName.toLowerCase()),
+              video.type.any((t) => t.toLowerCase() == type.toLowerCase()),
         )
         .toList();
   }

@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:flutter_video_app/providers/auth_provider.dart';
 import 'package:flutter_video_app/providers/video_provider.dart';
 import 'package:flutter_video_app/providers/favorites_provider.dart';
+import 'package:flutter_video_app/providers/watch_history_provider.dart';
 import 'package:flutter_video_app/screens/home_screen.dart';
 import 'package:flutter_video_app/screens/login_screen.dart';
 import 'package:flutter_video_app/utils/theme.dart';
@@ -48,6 +49,7 @@ class _MyAppState extends State<MyApp> {
         ),
         ChangeNotifierProvider(create: (_) => VideoProvider()),
         ChangeNotifierProvider(create: (_) => FavoritesProvider()),
+        ChangeNotifierProvider(create: (_) => WatchHistoryProvider()),
       ],
       child: MaterialApp(
         title: 'Flutter Video Streaming',
@@ -60,7 +62,6 @@ class _MyAppState extends State<MyApp> {
                 body: Center(child: CircularProgressIndicator()),
               );
             }
-
             return auth.isAuthenticated
                 ? const HomeScreen()
                 : const LoginScreen();

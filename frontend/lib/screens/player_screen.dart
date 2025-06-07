@@ -4,6 +4,7 @@ import 'package:chewie/chewie.dart';
 import 'package:provider/provider.dart';
 import '../models/video_model.dart';
 import '../providers/favorites_provider.dart';
+import '../providers/watch_history_provider.dart';
 
 class PlayerScreen extends StatefulWidget {
   final VideoModel video;
@@ -109,6 +110,18 @@ class _PlayerScreenState extends State<PlayerScreen> {
       onWillPop: () async {
         final position = await _videoPlayerController.position;
         print('Video stopped at position: ${position?.inSeconds} seconds');
+
+        // Add to watch history when user has watched at least 30 seconds
+        if ((position?.inSeconds ?? 0) >= 30) {
+          try {
+            await Provider.of<WatchHistoryProvider>(
+              context,
+              listen: false,
+            ).addToWatchHistory(widget.video);
+          } catch (e) {
+            print('Error updating watch history: $e');
+          }
+        }
         return true;
       },
       child: Consumer<FavoritesProvider>(

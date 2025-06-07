@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_video_app/models/video_model.dart';
 import 'package:flutter_video_app/services/api_service.dart';
-// import 'package:flutter_video_app/widgets/video_card.dart'; // Not directly used in this file after changes
-// import 'package:flutter_video_app/widgets/video_grid.dart'; // Not directly used in this file after changes
 import 'package:flutter_video_app/utils/constants.dart';
-import 'package:flutter_video_app/screens/genre_movies_screen.dart'; // Import GenreMoviesScreen
+import 'package:flutter_video_app/screens/genre_movies_screen.dart';
 
 class DiscoveryScreen extends StatefulWidget {
   const DiscoveryScreen({super.key});
@@ -81,16 +79,18 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => GenreMoviesScreen(
-              genreName: genre,
-              initialMovies: movies,
-              isType: false, // We are selecting by genre
-            ),
+            builder:
+                (context) => GenreMoviesScreen(
+                  genreName: genre,
+                  initialMovies: movies,
+                  isType: false, // We are selecting by genre
+                ),
           ),
         );
       }
     } catch (e) {
-      if (mounted) { // Ensure mounted before setState
+      if (mounted) {
+        // Ensure mounted before setState
         setState(() {
           _isLoadingMovies = false;
         });
@@ -99,7 +99,6 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
             content: Text('Failed to load movies for $genre: ${e.toString()}'),
           ),
         );
-      });
       }
       debugPrint("Error fetching movies for $genre: $e");
     }

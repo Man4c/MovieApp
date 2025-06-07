@@ -169,12 +169,9 @@ class _HomeScreenState extends State<HomeScreen> {
               setState(() {
                 _currentIndex = index;
                 if (_isSearching) {
-                  // If was searching, clear it when changing tabs
                   _isSearching = false;
                   _clearSearch();
-                }
-                // No specific fetch needed here for home categories as they load on initState.
-                // Discovery and Favorites manage their own loading.
+                } 
               });
             },
             backgroundColor: Colors.black,
@@ -223,7 +220,6 @@ class _HomeScreenState extends State<HomeScreen> {
     return SafeArea(
       child: Column(
         children: [
-          // Welcome Header dan Search Bar untuk Home screen
           if (_currentIndex == 0) _buildHomeHeader(),
 
           // Content Area
@@ -463,11 +459,11 @@ class _HomeScreenState extends State<HomeScreen> {
               leading: const Icon(Icons.person_outline),
               title: const Text('Profile'),
               onTap: () {
-                Navigator.pop(context); // Close drawer
+                Navigator.pop(context);
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                      builder: (context) => const UserProfileScreen()),
+                      builder: (context) => const ProfilePage()),
                 );
               },
             ),
@@ -475,14 +471,8 @@ class _HomeScreenState extends State<HomeScreen> {
               leading: const Icon(Icons.logout),
               title: const Text('Logout'),
               onTap: () async {
-                Navigator.pop(context); // Close drawer
+                Navigator.pop(context);
                 await authProvider.logout();
-                // Optional: Explicit navigation if root navigator doesn't handle it fast enough
-                // or if on a nested navigator.
-                // if (mounted) {
-                //   Navigator.of(context).pushAndRemoveUntil(
-                //     MaterialPageRoute(builder: (context) => const LoginScreen()),
-                //     (Route<dynamic> route) => false);
                 // }
               },
             ),

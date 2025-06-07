@@ -121,7 +121,7 @@ class AuthProvider with ChangeNotifier {
       if (_token != null) { // Only attempt logout if there's a token
         await http.post(
           Uri.parse('${ApiService.baseUrl}/auth/logout'),
-          headers: ApiService._headers,
+          headers: {'Authorization': 'Bearer $_token'},
         );
         // Note: Backend logout clears a cookie. The request is sent with credentials.
         // We don't strictly need to check response.statusCode == 200 here,

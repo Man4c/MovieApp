@@ -57,57 +57,59 @@ class _VideoCardState extends State<VideoCard> {
                         child: CachedNetworkImage(
                           imageUrl: widget.video.thumbnailUrl,
                           fit: BoxFit.cover,
-                          placeholder: (context, url) => Container(
-                            color: Colors.grey[800],
-                            child: const Center(
-                              child: CircularProgressIndicator(
-                                color: Colors.deepOrange,
+                          placeholder:
+                              (context, url) => Container(
+                                color: Colors.grey[800],
+                                child: const Center(
+                                  child: CircularProgressIndicator(
+                                    color: Colors.deepOrange,
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
-                          errorWidget: (context, url, error) => Image.asset(
-                            'assets/images/placeholder.png',
-                            fit: BoxFit.cover,
-                          ),
+                          errorWidget:
+                              (context, url, error) => Image.asset(
+                                'assets/images/placeholder.png',
+                                fit: BoxFit.cover,
+                              ),
                         ),
                       ),
                     ],
                   ),
                 ),
-                Positioned(
-                  top: 4,
-                  right: 8, // Adjusted right padding to align with AnimatedContainer margin
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.3),
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      icon: Icon(
-                        isFavorite ? Icons.favorite : Icons.favorite_border,
-                        color: isFavorite ? Colors.red : Colors.white,
-                      ),
-                      iconSize: 20.0, // Smaller icon size
-                      padding: EdgeInsets.zero, // Remove default padding
-                      constraints: const BoxConstraints(), // Remove default constraints
-                      onPressed: () async { // Make async
-                        try {
-                          await favoritesProvider.toggleFavorite(widget.video); // Add await
-                        } catch (e) {
-                          // Use 'context' from the Consumer's builder
-                          if (mounted) { // Check if mounted (StatefulWidget)
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Error updating favorite: ${e.toString()}'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                          }
-                        }
-                      },
-                    ),
-                  ),
-                ),
+                // Positioned(
+                //   top: 4,
+                //   right: 8, // Adjusted right padding to align with AnimatedContainer margin
+                //   child: Container(
+                //     decoration: BoxDecoration(
+                //       color: Colors.black.withOpacity(0.3),
+                //       shape: BoxShape.circle,
+                //     ),
+                //     child: IconButton(
+                //       icon: Icon(
+                //         isFavorite ? Icons.favorite : Icons.favorite_border,
+                //         color: isFavorite ? Colors.red : Colors.white,
+                //       ),
+                //       iconSize: 20.0, // Smaller icon size
+                //       padding: EdgeInsets.zero, // Remove default padding
+                //       constraints: const BoxConstraints(), // Remove default constraints
+                //       onPressed: () async { // Make async
+                //         try {
+                //           await favoritesProvider.toggleFavorite(widget.video); // Add await
+                //         } catch (e) {
+                //           // Use 'context' from the Consumer's builder
+                //           if (mounted) { // Check if mounted (StatefulWidget)
+                //             ScaffoldMessenger.of(context).showSnackBar(
+                //               SnackBar(
+                //                 content: Text('Error updating favorite: ${e.toString()}'),
+                //                 backgroundColor: Colors.red,
+                //               ),
+                //             );
+                //           }
+                //         }
+                //       },
+                //     ),
+                //   ),
+                // ),
               ],
             ),
           ),
