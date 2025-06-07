@@ -16,6 +16,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
+  bool _isGoogleLoading = false; // Added for Google Sign-In
   bool _obscurePassword = true;
   bool _rememberMe = false;
 
@@ -371,10 +372,41 @@ class _LoginScreenState extends State<LoginScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       _buildSocialButton(
-                        icon: Icons.g_mobiledata,
-                        onTap: () {
-                          // TODO: Implement Google login
-                        },
+                        iconWidget: _isGoogleLoading
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                            : const Icon(Icons.g_mobiledata, color: Colors.white70, size: 24), // Placeholder, use a proper Google icon
+                        onTap: _isGoogleLoading
+                            ? null
+                            : () async {
+                                setState(() => _isGoogleLoading = true);
+                                try {
+                                  final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                                  await authProvider.signInWithGoogle();
+
+                                  if (mounted && authProvider.isAuthenticated) {
+                                    Navigator.of(context).pushReplacement(
+                                      MaterialPageRoute(builder: (_) => const HomeScreen()),
+                                    );
+                                  } else if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(content: Text('Google Sign-In cancelled or failed.')),
+                                    );
+                                  }
+                                } catch (e) {
+                                  if (mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Google Sign-In Error: ${e.toString()}')),
+                                    );
+                                  }
+                                } finally {
+                                  if (mounted) {
+                                    setState(() => _isGoogleLoading = false);
+                                  }
+                                }
+                              },
                       ),
                       const SizedBox(width: 24),
                       _buildSocialButton(
@@ -431,8 +463,8 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildSocialButton({
-    required IconData icon,
-    required VoidCallback onTap,
+    required Widget iconWidget, // Changed to Widget to allow CircularProgressIndicator
+    required VoidCallback? onTap, // Changed to VoidCallback? to allow null when loading
   }) {
     return GestureDetector(
       onTap: onTap,
@@ -443,11 +475,7 @@ class _LoginScreenState extends State<LoginScreen> {
           color: const Color(0xFF23262A),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Icon(
-          icon,
-          color: Colors.white70,
-          size: 24,
-        ),
+        child: Center(child: iconWidget), // Center the widget
       ),
     );
   }

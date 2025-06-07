@@ -5,6 +5,7 @@ class UserModel {
   final List<String> favorites;
   final List<String> watchHistory; // Added watch history
   final String role;
+  final String? googleId;
 
   UserModel({
     required this.id,
@@ -13,6 +14,7 @@ class UserModel {
     required this.favorites,
     required this.watchHistory, // Added to constructor
     required this.role,
+    this.googleId,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -25,11 +27,12 @@ class UserModel {
         json['watchHistory'] as List? ?? [],
       ), // Added parsing
       role: json['role'] as String? ?? 'customer',
+      googleId: json['googleId'] as String?,
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {
+    final Map<String, dynamic> data = {
       '_id': id,
       'username': name,
       'email': email,
@@ -37,5 +40,9 @@ class UserModel {
       'watchHistory': watchHistory, // Added to JSON
       'role': role,
     };
+    if (googleId != null) {
+      data['googleId'] = googleId;
+    }
+    return data;
   }
 }

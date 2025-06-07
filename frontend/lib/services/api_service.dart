@@ -218,6 +218,55 @@ class ApiService {
     }
   }
 
+  static Future<UserModel> updateUsername(String newUsername) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/users/me/username'), // Corrected endpoint
+      headers: _headers,
+      body: json.encode({'newUsername': newUsername}),
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      // Backend returns { success: true, message: "...", data: { id: ..., name: ... }}
+      // The actual user object is in data['data']
+      return UserModel.fromJson(data['data'] as Map<String, dynamic>);
+    }
+    throw _handleError(response);
+  }
+
+  static Future<void> changePassword(String currentPassword, String newPassword) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/auth/change-password'),
+      headers: _headers,
+      body: json.encode({
+        'currentPassword': currentPassword,
+        'newPassword': newPassword,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      // Password change successful, no specific data usually returned other than a message
+      return;
+    }
+    throw _handleError(response);
+  }
+
+  static Future<Map<String, dynamic>> signInWithGoogleToken(String idToken) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/auth/google/token'), // This new endpoint needs to be created on the backend
+      headers: _headers,
+      body: json.encode({'idToken': idToken}),
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      // Expects backend to return { token: '...', user: { ... } }
+      _token = data['token'] as String?;
+      return data; // Return the whole map {token, user}
+    }
+    throw _handleError(response);
+  }
+
   static Exception _handleError(http.Response response) {
     try {
       final error = json.decode(response.body)['message'];

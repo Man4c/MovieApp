@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_video_app/services/api_service.dart';
 import 'package:flutter_video_app/models/user_model.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthProvider with ChangeNotifier {
   bool _isAuthenticated = false;
@@ -12,6 +13,13 @@ class AuthProvider with ChangeNotifier {
   UserModel? _user;
   static const String _tokenKey = 'auth_token';
   static const String _userKey = 'user_data';
+
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: [
+      'email',
+      'profile',
+    ],
+  );
 
   bool get isAuthenticated => _isAuthenticated;
   bool get isInitialized => _isInitialized;
@@ -115,29 +123,86 @@ class AuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> updateUsername(String newUsername) async {
+    if (_user == null || _token == null) throw Exception('User not authenticated');
+
+    try {
+      final updatedUser = await ApiService.updateUsername(newUsername);
+      _user = updatedUser; // Update the local user model
+      await _saveAuthState(); // Resave auth state with updated user
+      notifyListeners();
+    } catch (e) {
+      print('Error updating username: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> changePassword(String currentPassword, String newPassword) async {
+    if (_token == null) throw Exception('User not authenticated');
+
+    try {
+      await ApiService.changePassword(currentPassword, newPassword);
+      // No user model change, but you might want to notify listeners if UI needs to react
+      // notifyListeners();
+    } catch (e) {
+      print('Error changing password: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> signInWithGoogle() async {
+    try {
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) {
+        // User cancelled the sign-in
+        return;
+      }
+
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final String? idToken = googleAuth.idToken;
+
+      if (idToken == null) {
+        throw Exception('Failed to get Google ID token.');
+      }
+
+      // Call ApiService to send this token to your backend
+      final responseData = await ApiService.signInWithGoogleToken(idToken);
+
+      // Assuming responseData is a map like {'token': '...', 'user': { ... }}
+      // Use existing _handleAuthResponse to process it
+      await _handleAuthResponse(responseData);
+
+    } catch (e) {
+      print('Error during Google sign-in: $e');
+      // Ensure logout if partial auth occurs or error happens
+      await logout(); // Or a more specific cleanup
+      rethrow;
+    }
+  }
+
   Future<void> logout() async {
     try {
-      // Make an HTTP POST request to the backend logout endpoint
-      if (_token != null) { // Only attempt logout if there's a token
+      // Existing backend logout call
+      if (_token != null) {
         await http.post(
           Uri.parse('${ApiService.baseUrl}/auth/logout'),
           headers: {'Authorization': 'Bearer $_token'},
         );
-        // Note: Backend logout clears a cookie. The request is sent with credentials.
-        // We don't strictly need to check response.statusCode == 200 here,
-        // as we want to clear local state regardless.
-        // However, you might want to log if the status code is not 200.
-        print('Logout request sent to backend.');
       }
+
+      // Sign out from Google
+      if (await _googleSignIn.isSignedIn()) {
+        await _googleSignIn.signOut();
+      }
+
     } catch (e) {
-      // Log the error, but still proceed to clear local state
-      print('Error during backend logout API call: $e');
+      print('Error during backend logout API call or Google sign out: $e');
     } finally {
       _token = null;
       _user = null;
       _isAuthenticated = false;
-      ApiService.setToken(''); // Clear token in ApiService
-      await _clearAuthState(); // Clear token and user from SharedPreferences
+      ApiService.setToken('');
+      await _clearAuthState();
       notifyListeners();
     }
   }

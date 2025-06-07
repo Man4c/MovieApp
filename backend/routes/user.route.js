@@ -7,11 +7,13 @@ import {
   getWatchHistory,
   addToWatchHistory,
   clearWatchHistory,
+  updateUsername,
 } from "../controllers/user.controller.js";
 
 const router = express.Router();
 
 router.get("/me", protectRoute, getMe);
+router.put("/me/username", protectRoute, updateUsername);
 router.get("/favorites", protectRoute, getUserFavorites);
 router.post("/favorites/:movieId", protectRoute, toggleFavorite); // movieId here is tmdbId
 router.get("/watch-history", protectRoute, getWatchHistory);

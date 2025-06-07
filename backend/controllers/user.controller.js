@@ -52,6 +52,61 @@ export const getMe = async (req, res) => {
   }
 };
 
+export const updateUsername = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { newUsername } = req.body;
+
+    if (!newUsername || newUsername.trim() === "") {
+      return res
+        .status(400)
+        .json({ success: false, message: "New username cannot be empty" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    if (user.username === newUsername) {
+      return res.status(400).json({
+        success: false,
+        message: "New username cannot be the same as the current one",
+      });
+    }
+
+    const existingUser = await User.findOne({ username: newUsername });
+    if (existingUser && existingUser._id.toString() !== userId) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Username already taken" });
+    }
+
+    user.username = newUsername;
+    await user.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Username updated successfully",
+      data: {
+        id: user._id,
+        name: user.username,
+        email: user.email,
+        role: user.role,
+        favorites: user.favorites || [],
+      },
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to update username",
+      error: error.message,
+    });
+  }
+};
+
 export const getUserFavorites = async (req, res) => {
   try {
     const userId = req.user.id;

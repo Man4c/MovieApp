@@ -6,6 +6,7 @@ import moviesRoutes from "./routes/movie.route.js";
 import authRoutes from "./routes/auth.route.js";
 import userRoutes from "./routes/user.route.js";
 import genreRoutes from "./routes/genre.route.js";
+import passport from './config/passport-setup.js';
 
 dotenv.config();
 const app = express();
@@ -20,6 +21,8 @@ app.use(
 
 app.use(express.json());
 app.use(express.urlencoded());
+
+app.use(passport.initialize());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/movies", moviesRoutes);

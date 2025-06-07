@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_video_app/providers/auth_provider.dart';
 import 'package:flutter_video_app/providers/watch_history_provider.dart';
 import 'package:flutter_video_app/providers/favorites_provider.dart';
 import 'package:flutter_video_app/screens/favorites_screen.dart';
@@ -13,15 +14,50 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  bool _isSubscribed = true;
+  bool _isSubscribed = true; // This might be part of user model later
   final DateTime _subscriptionEndDate = DateTime.now().add(
-    const Duration(days: 30),
+    const Duration(days: 30), // This might be part of user model later
   );
+
+  final _usernameFormKey = GlobalKey<FormState>();
+  final _passwordFormKey = GlobalKey<FormState>();
+
+  late TextEditingController _newUsernameController;
+  late TextEditingController _currentPasswordController;
+  late TextEditingController _newPasswordController;
+  late TextEditingController _confirmPasswordController;
+
+  bool _isLoadingUsername = false;
+  bool _isLoadingPassword = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _newUsernameController = TextEditingController();
+    _currentPasswordController = TextEditingController();
+    _newPasswordController = TextEditingController();
+    _confirmPasswordController = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _newUsernameController.dispose();
+    _currentPasswordController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    final authProvider = Provider.of<AuthProvider>(context);
+    // Use Consumer3 if you need to listen to AuthProvider as well for UI updates
+    // For now, direct access to authProvider.user is fine for displaying data
+    // and triggering actions. If user data changes need to rebuild parts of UI
+    // not covered by Consumer2, then Consumer3 or nested Consumers might be needed.
+
     return Consumer2<FavoritesProvider, WatchHistoryProvider>(
-      builder: (context, favoritesProvider, watchHistoryProvider, _) {
+      builder: (context, favoritesProvider, watchHistoryProvider, child) {
         final favoritesCount = favoritesProvider.favorites.length;
         final watchHistoryCount = watchHistoryProvider.watchHistory.length;
 
@@ -60,9 +96,9 @@ class _ProfilePageState extends State<ProfilePage> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
-                                    'John Doe',
-                                    style: TextStyle(
+                                  Text(
+                                    authProvider.user?.name ?? 'Guest User',
+                                    style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 24,
                                       fontWeight: FontWeight.bold,
@@ -70,7 +106,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    'john.doe@email.com',
+                                    authProvider.user?.email ?? 'No email',
                                     style: TextStyle(
                                       color: Colors.white.withOpacity(0.7),
                                       fontSize: 14,
@@ -79,15 +115,19 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ],
                               ),
                             ),
-                            IconButton(
-                              icon: const Icon(
-                                Icons.edit,
-                                color: Colors.white70,
+                            if (authProvider.isAuthenticated && authProvider.user?.googleId == null) // Only show edit for non-google users
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.edit,
+                                  color: Colors.white70,
+                                ),
+                                onPressed: () {
+                                  if (authProvider.user != null) {
+                                    _newUsernameController.text = authProvider.user!.name;
+                                  }
+                                  _showUpdateUsernameDialog(context, authProvider);
+                                },
                               ),
-                              onPressed: () {
-                                // TODO: Navigate to edit profile
-                              },
-                            ),
                           ],
                         ),
                         const SizedBox(height: 24),
@@ -202,10 +242,19 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                         _buildMenuItem(
                           icon: Icons.settings,
-                          title: 'Pengaturan',
-                          subtitle: 'Notifikasi, privasi, dan lainnya',
+                          title: 'Pengaturan Akun',
+                          subtitle: 'Ubah username & password',
                           onTap: () {
-                            // TODO: Navigate to settings
+                            // For this subtask, let's make "Pengaturan Akun" show a dialog
+                            // that gives options or directly shows change password if username is separate.
+                            // Or, we can make it directly trigger change password if edit username is via the top icon.
+                            if (authProvider.isAuthenticated && authProvider.user?.googleId == null) {
+                               _showChangePasswordDialog(context, authProvider);
+                            } else if (authProvider.isAuthenticated && authProvider.user?.googleId != null) {
+                               ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Akun Google tidak dapat mengubah password disini.')),
+                              );
+                            }
                           },
                         ),
                         _buildMenuItem(
@@ -264,13 +313,210 @@ class _ProfilePageState extends State<ProfilePage> {
                       // dst.
                     ],
                     onSeeAll: () {
-                      // Navigasi ke halaman riwayat lengkap
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const WatchHistoryScreen(),
+                        ),
+                      );
                     },
                   ),
                 ],
               ),
             ),
           ),
+        );
+      },
+    );
+  }
+
+  void _showUpdateUsernameDialog(BuildContext context, AuthProvider authProvider) {
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF2C2F33),
+          title: const Text('Ubah Username', style: TextStyle(color: Colors.white)),
+          content: Form(
+            key: _usernameFormKey,
+            child: TextFormField(
+              controller: _newUsernameController,
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: 'Username Baru',
+                labelStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
+                enabledBorder: UnderlineInputBorder(
+                  borderSide: BorderSide(color: Colors.white.withOpacity(0.7)),
+                ),
+                focusedBorder: const UnderlineInputBorder(
+                  borderSide: BorderSide(color: Color(0xFFE53935)),
+                ),
+              ),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Username tidak boleh kosong';
+                }
+                if (value.length < 3) {
+                  return 'Username minimal 3 karakter';
+                }
+                if (value == authProvider.user?.name) {
+                  return 'Username baru tidak boleh sama dengan yang sekarang';
+                }
+                return null;
+              },
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Batal', style: TextStyle(color: Colors.white70)),
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+              },
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE53935)),
+              child: _isLoadingUsername
+                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text('Simpan'),
+              onPressed: () async {
+                if (_usernameFormKey.currentState!.validate()) {
+                  setState(() {
+                    _isLoadingUsername = true;
+                  });
+                  try {
+                    await authProvider.updateUsername(_newUsernameController.text);
+                    Navigator.of(dialogContext).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Username berhasil diperbarui!')),
+                    );
+                  } catch (e) {
+                    Navigator.of(dialogContext).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Gagal memperbarui username: ${e.toString()}')),
+                    );
+                  } finally {
+                    setState(() {
+                      _isLoadingUsername = false;
+                    });
+                  }
+                }
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showChangePasswordDialog(BuildContext context, AuthProvider authProvider) {
+    _currentPasswordController.clear();
+    _newPasswordController.clear();
+    _confirmPasswordController.clear();
+    showDialog(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF2C2F33),
+          title: const Text('Ubah Password', style: TextStyle(color: Colors.white)),
+          content: Form(
+            key: _passwordFormKey,
+            child: SingleChildScrollView( // Added SingleChildScrollView
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: <Widget>[
+                  TextFormField(
+                    controller: _currentPasswordController,
+                    obscureText: true,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      labelText: 'Password Saat Ini',
+                      labelStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
+                    ),
+                    validator: (value) => value!.isEmpty ? 'Password saat ini tidak boleh kosong' : null,
+                  ),
+                  TextFormField(
+                    controller: _newPasswordController,
+                    obscureText: true,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      labelText: 'Password Baru',
+                      labelStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Password baru tidak boleh kosong';
+                      }
+                      if (value.length < 6) {
+                        return 'Password minimal 6 karakter';
+                      }
+                      return null;
+                    },
+                  ),
+                  TextFormField(
+                    controller: _confirmPasswordController,
+                    obscureText: true,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      labelText: 'Konfirmasi Password Baru',
+                      labelStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Konfirmasi password tidak boleh kosong';
+                      }
+                      if (value != _newPasswordController.text) {
+                        return 'Password tidak cocok';
+                      }
+                      return null;
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('Batal', style: TextStyle(color: Colors.white70)),
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+              },
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE53935)),
+              child: _isLoadingPassword
+                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Text('Simpan'),
+              onPressed: () async {
+                if (_passwordFormKey.currentState!.validate()) {
+                  setState(() {
+                    _isLoadingPassword = true;
+                  });
+                  try {
+                    await authProvider.changePassword(
+                      _currentPasswordController.text,
+                      _newPasswordController.text,
+                    );
+                    Navigator.of(dialogContext).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Password berhasil diubah!')),
+                    );
+                  } catch (e) {
+                    // Check if dialogContext is still mounted before showing SnackBar
+                    if (!Navigator.of(dialogContext).mounted) return;
+                     // Error might be shown by the dialog itself, or pop and show
+                    Navigator.of(dialogContext).pop(); // Pop first
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Gagal mengubah password: ${e.toString()}')),
+                    );
+                  } finally {
+                    setState(() {
+                      _isLoadingPassword = false;
+                    });
+                  }
+                }
+              },
+            ),
+          ],
         );
       },
     );
