@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const reviewSchema = new mongoose.Schema(
+const commentSchema = new mongoose.Schema(
   {
     id: {
       type: String,
@@ -26,10 +26,15 @@ const reviewSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    parentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Comment", // Self-referential
+      default: null, // Or remove default if you want it to be explicitly set
+    },
   },
   { timestamps: true }
 );
 
-const Review = mongoose.model('Review', reviewSchema);
+const Comment = mongoose.model('Comment', commentSchema);
 
-export default Review
+export default Comment

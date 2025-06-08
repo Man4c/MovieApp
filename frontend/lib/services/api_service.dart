@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_video_app/models/video_model.dart';
-import 'package:flutter_video_app/models/review_model.dart';
+import 'package:flutter_video_app/models/comment_model.dart';
 import 'package:flutter_video_app/models/user_model.dart';
 
 class ApiService {
@@ -131,10 +131,10 @@ class ApiService {
     }
   }
 
-  // Reviews endpoints
-  static Future<List<ReviewModel>> getVideoReviews(String videoId) async {
+  // Comments endpoints
+  static Future<List<CommentModel>> getVideoComments(String videoId) async {
     final response = await http.get(
-      Uri.parse('$baseUrl/movies/$videoId/reviews'),
+      Uri.parse('$baseUrl/movies/$videoId/comments'),
       headers: _headers,
     );
 
@@ -142,27 +142,32 @@ class ApiService {
       final data = json.decode(response.body);
 
       return (data['data'] as List)
-          .map((json) => ReviewModel.fromJson(json as Map<String, dynamic>))
+          .map((json) => CommentModel.fromJson(json as Map<String, dynamic>))
           .toList();
     }
     throw _handleError(response);
   }
 
-  static Future<ReviewModel> addReview(
+  static Future<CommentModel> addComment(
     String videoId,
     String comment,
-    double rating,
+    double rating, // Keep rating for now
+    {String? parentId} // Add optional parentId
   ) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/movies/$videoId/reviews'),
+      Uri.parse('$baseUrl/movies/$videoId/comments'),
       headers: _headers,
-      body: json.encode({'comment': comment, 'rating': rating}),
+      body: json.encode({
+        'comment': comment,
+        'rating': rating,
+        if (parentId != null) 'parentId': parentId,
+      }),
     );
 
     if (response.statusCode == 201) {
       final data = json.decode(response.body);
 
-      return ReviewModel.fromJson(data['data'] as Map<String, dynamic>);
+      return CommentModel.fromJson(data['data'] as Map<String, dynamic>);
     }
     throw _handleError(response);
   }

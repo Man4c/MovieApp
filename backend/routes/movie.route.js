@@ -5,9 +5,9 @@ import {
   getMovieById
 } from "../controllers/movie.controller.js";
 import {
-  addMovieReview,
-  getMovieReviews
-} from "../controllers/review.controller.js";
+  addMovieComment,
+  getMovieComments
+} from "../controllers/comment.controller.js";
 
 import { protectRoute } from "../middleware/auth.middleware.js";
 
@@ -17,8 +17,8 @@ router.get("/", protectRoute, getAllMovies);
 router.get("/by-type/:type", protectRoute, getAllMovieByType);
 router.get("/:tmdbId", protectRoute, getMovieById);
 
-// Review routes for a specific movie
-router.get("/:tmdbId/reviews", protectRoute, getMovieReviews);
-router.post("/:tmdbId/reviews", protectRoute, addMovieReview);
+// Comment routes for a specific movie
+router.get("/:tmdbId/comments", getMovieComments);
+router.post("/:tmdbId/comments", protectRoute, addMovieComment);
 
 export default router;
