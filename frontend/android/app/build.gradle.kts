@@ -9,6 +9,11 @@ android {
     namespace = "com.example.dummy_movie"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = "28.0.13004108"
+    
+    // Add this block for Google Sign In
+    buildFeatures {
+        viewBinding = true
+    }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11

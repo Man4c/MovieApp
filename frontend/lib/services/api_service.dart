@@ -5,7 +5,7 @@ import 'package:flutter_video_app/models/review_model.dart';
 import 'package:flutter_video_app/models/user_model.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://localhost:4002/api';
+  static const String baseUrl = 'http://192.168.138.1:4002/api';
   static String? _token;
 
   static void setToken(String token) {
@@ -234,7 +234,10 @@ class ApiService {
     throw _handleError(response);
   }
 
-  static Future<void> changePassword(String currentPassword, String newPassword) async {
+  static Future<void> changePassword(
+    String currentPassword,
+    String newPassword,
+  ) async {
     final response = await http.post(
       Uri.parse('$baseUrl/auth/change-password'),
       headers: _headers,
@@ -251,9 +254,13 @@ class ApiService {
     throw _handleError(response);
   }
 
-  static Future<Map<String, dynamic>> signInWithGoogleToken(String idToken) async {
+  static Future<Map<String, dynamic>> signInWithGoogleToken(
+    String idToken,
+  ) async {
     final response = await http.post(
-      Uri.parse('$baseUrl/auth/google/token'), // This new endpoint needs to be created on the backend
+      Uri.parse(
+        '$baseUrl/auth/google/token',
+      ), // This new endpoint needs to be created on the backend
       headers: _headers,
       body: json.encode({'idToken': idToken}),
     );

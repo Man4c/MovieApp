@@ -18,7 +18,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   bool _isLoading = false;
-  bool _isGoogleLoading = false; // Added for Google Sign-In
+  bool _isGoogleLoading = false; 
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _agreeToTerms = false;
@@ -640,14 +640,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       const SizedBox(width: 24),
                       _buildSocialButton(
-                        icon: Icons.facebook,
+                        iconWidget: const Icon(Icons.facebook, color: Colors.white70, size: 24),
                         onTap: () {
                           // TODO: Implement Facebook registration
                         },
                       ),
                       const SizedBox(width: 24),
                       _buildSocialButton(
-                        icon: Icons.alternate_email,
+                        iconWidget: const Icon(Icons.alternate_email, color: Colors.white70, size: 24),
                         onTap: () {
                           // TODO: Implement Twitter registration
                         },

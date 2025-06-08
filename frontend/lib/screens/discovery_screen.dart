@@ -13,11 +13,11 @@ class DiscoveryScreen extends StatefulWidget {
 
 class _DiscoveryScreenState extends State<DiscoveryScreen> {
   List<String> _genres = [];
-  Map<String, List<VideoModel>> _moviesByGenre = {};
+  final Map<String, List<VideoModel>> _moviesByGenre = {};
   bool _isLoadingGenres = true;
   bool _isLoadingMovies = false;
   String? _selectedGenre;
-  ScrollController _scrollController = ScrollController();
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {

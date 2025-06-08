@@ -6,7 +6,6 @@ final ThemeData appTheme = ThemeData(
     primary: const Color(0xFF1F80E0),
     secondary: const Color(0xFF1F80E0),
     surface: const Color(0xFF1D1D1D),
-    background: const Color(0xFF121212),
     onSurface: Colors.white,
   ),
   appBarTheme: const AppBarTheme(

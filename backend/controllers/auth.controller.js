@@ -1,6 +1,6 @@
 import User from "../models/user.model.js";
 import { generateToken } from "../lib/jwt.js";
-import { OAuth2Client } from 'google-auth-library';
+import { OAuth2Client } from "google-auth-library";
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID; // Ensure this is available
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
@@ -66,7 +66,7 @@ export const login = async (req, res) => {
     }
     const token = generateToken(user._id);
     console.log(token);
-    
+
     // No need to re-fetch user here if not creating, but ensure all fields are selected
     // If user.role or user.favorites might be excluded by .select('+password'), adjust if necessary
     // For now, assume they are available on 'user' object after findOne without explicit select for those
@@ -91,19 +91,20 @@ export const verifyGoogleToken = async (req, res) => {
   const { idToken } = req.body;
 
   if (!idToken) {
-    return res.status(400).json({ message: 'ID token is required' });
+    return res.status(400).json({ message: "ID token is required" });
   }
 
   try {
     const ticket = await client.verifyIdToken({
       idToken,
-      audience: GOOGLE_CLIENT_ID, // Specify the CLIENT_ID of the app that accesses the backend
+      audience: GOOGLE_CLIENT_ID,
     });
     const payload = ticket.getPayload();
-    const googleId = payload['sub'];
-    const email = payload['email'];
-    const name = payload['name']; // Or given_name, family_name
+    const googleId = payload["sub"];
+    const email = payload["email"];
+    const name = payload["name"]; // Or given_name, family_name
 
+    // Find or create user
     let user = await User.findOne({ googleId });
 
     if (user) {
@@ -119,7 +120,7 @@ export const verifyGoogleToken = async (req, res) => {
           favorites: user.favorites || [],
           googleId: user.googleId,
         },
-        message: 'Google authentication successful',
+        message: "Google authentication successful",
       });
     }
 
@@ -127,15 +128,16 @@ export const verifyGoogleToken = async (req, res) => {
     const existingEmailUser = await User.findOne({ email });
     if (existingEmailUser && !existingEmailUser.googleId) {
       return res.status(400).json({
-        message: 'Email already registered with a password. Please log in with your password or link your Google account (linking not implemented).',
-        needsLinking: true // Custom flag for frontend
+        message:
+          "Email already registered with a password. Please log in with your password or link your Google account (linking not implemented).",
+        needsLinking: true, // Custom flag for frontend
       });
     }
 
     // If email exists with a googleId, it should have been caught by the first User.findOne({googleId})
     // So, if we are here, it's a new user or an existing Google user whose googleId wasn't found (should not happen if DB is consistent)
 
-    let username = name.replace(/\s+/g, '').toLowerCase();
+    let username = name.replace(/\s+/g, "").toLowerCase();
     const userWithSameUsername = await User.findOne({ username });
     if (userWithSameUsername) {
       username = `${username}${Date.now().toString().slice(-4)}`;
@@ -150,7 +152,8 @@ export const verifyGoogleToken = async (req, res) => {
     await user.save();
 
     const token = generateToken(user._id);
-    return res.status(201).json({ // 201 for new resource created
+    return res.status(201).json({
+      // 201 for new resource created
       token,
       user: {
         id: user._id,
@@ -160,15 +163,22 @@ export const verifyGoogleToken = async (req, res) => {
         favorites: user.favorites || [],
         googleId: user.googleId,
       },
-      message: 'Google user registered and logged in successfully',
+      message: "Google user registered and logged in successfully",
     });
-
   } catch (error) {
-    console.error('Error verifying Google token:', error);
-    if (error.message.includes("Invalid token signature") || error.message.includes("Token used too late") || error.message.includes("Invalid audience") ) {
-         return res.status(401).json({ message: "Invalid Google token or token expired." });
+    console.error("Error verifying Google token:", error);
+    if (
+      error.message.includes("Invalid token signature") ||
+      error.message.includes("Token used too late") ||
+      error.message.includes("Invalid audience")
+    ) {
+      return res
+        .status(401)
+        .json({ message: "Invalid Google token or token expired." });
     }
-    return res.status(500).json({ message: 'Failed to verify Google token', error: error.message });
+    return res
+      .status(500)
+      .json({ message: "Failed to verify Google token", error: error.message });
   }
 };
 
@@ -190,9 +200,9 @@ export const changePassword = async (req, res) => {
     }
 
     if (!user.password && user.googleId) {
-      return res
-        .status(400)
-        .json({ message: "Cannot change password for accounts registered with Google." });
+      return res.status(400).json({
+        message: "Cannot change password for accounts registered with Google.",
+      });
     }
 
     const isMatch = await user.matchPassword(currentPassword);
@@ -212,9 +222,7 @@ export const changePassword = async (req, res) => {
     res.status(200).json({ message: "Password changed successfully" });
   } catch (error) {
     console.error("Change password error:", error);
-    res
-      .status(500)
-      .json({ message: "Server Error", error: error.message });
+    res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
 

@@ -8,9 +8,17 @@ import 'package:flutter_video_app/providers/watch_history_provider.dart';
 import 'package:flutter_video_app/screens/home_screen.dart';
 import 'package:flutter_video_app/screens/login_screen.dart';
 import 'package:flutter_video_app/utils/theme.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'dart:io';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  if (Platform.isAndroid) {
+    await GoogleSignIn().signOut(); // Clear any existing sign in
+    GoogleSignIn.standard(); // Initialize with default scopes
+  }
+
   runApp(const MyApp());
 }
 

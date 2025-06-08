@@ -24,7 +24,7 @@ class VideoCard extends StatefulWidget {
 }
 
 class _VideoCardState extends State<VideoCard> {
-  bool _isHovered = false;
+  final bool _isHovered = false;
 
   @override
   Widget build(BuildContext context) {

@@ -13,12 +13,10 @@ class AuthProvider with ChangeNotifier {
   UserModel? _user;
   static const String _tokenKey = 'auth_token';
   static const String _userKey = 'user_data';
-
   final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: [
-      'email',
-      'profile',
-    ],
+    scopes: ['email', 'profile'],
+    clientId:
+        '42959912450-2vtkro05bddrc4b1u6m3bd2kk292jsrn.apps.googleusercontent.com',
   );
 
   bool get isAuthenticated => _isAuthenticated;
@@ -124,7 +122,8 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<void> updateUsername(String newUsername) async {
-    if (_user == null || _token == null) throw Exception('User not authenticated');
+    if (_user == null || _token == null)
+      throw Exception('User not authenticated');
 
     try {
       final updatedUser = await ApiService.updateUsername(newUsername);
@@ -137,7 +136,10 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  Future<void> changePassword(String currentPassword, String newPassword) async {
+  Future<void> changePassword(
+    String currentPassword,
+    String newPassword,
+  ) async {
     if (_token == null) throw Exception('User not authenticated');
 
     try {
@@ -152,14 +154,18 @@ class AuthProvider with ChangeNotifier {
 
   Future<void> signInWithGoogle() async {
     try {
+      print('Starting Google Sign In...');
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) {
-        // User cancelled the sign-in
+        print('User cancelled the sign-in');
         return;
       }
 
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      print('Got Google User: ${googleUser.email}');
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
       final String? idToken = googleAuth.idToken;
+      print('Got idToken: ${idToken != null}');
 
       if (idToken == null) {
         throw Exception('Failed to get Google ID token.');
@@ -171,7 +177,6 @@ class AuthProvider with ChangeNotifier {
       // Assuming responseData is a map like {'token': '...', 'user': { ... }}
       // Use existing _handleAuthResponse to process it
       await _handleAuthResponse(responseData);
-
     } catch (e) {
       print('Error during Google sign-in: $e');
       // Ensure logout if partial auth occurs or error happens
@@ -194,7 +199,6 @@ class AuthProvider with ChangeNotifier {
       if (await _googleSignIn.isSignedIn()) {
         await _googleSignIn.signOut();
       }
-
     } catch (e) {
       print('Error during backend logout API call or Google sign out: $e');
     } finally {

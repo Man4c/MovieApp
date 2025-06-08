@@ -5,7 +5,7 @@ import 'package:flutter_video_app/services/api_service.dart';
 
 class FavoritesProvider with ChangeNotifier {
   List<VideoModel> _favorites = [];
-  Map<String, List<ReviewModel>> _reviews = {};
+  final Map<String, List<ReviewModel>> _reviews = {};
   bool _isLoading = false;
   
   List<VideoModel> get favorites => _favorites;

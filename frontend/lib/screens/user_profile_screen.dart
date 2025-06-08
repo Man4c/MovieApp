@@ -7,14 +7,14 @@ import 'package:flutter_video_app/screens/favorites_screen.dart';
 import 'package:flutter_video_app/screens/watch_history_screen.dart';
 
 class ProfilePage extends StatefulWidget {
-  const ProfilePage({Key? key}) : super(key: key);
+  const ProfilePage({super.key});
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  bool _isSubscribed = true; // This might be part of user model later
+  final bool _isSubscribed = true; // This might be part of user model later
   final DateTime _subscriptionEndDate = DateTime.now().add(
     const Duration(days: 30), // This might be part of user model later
   );
@@ -51,15 +51,16 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context);
-    // Use Consumer3 if you need to listen to AuthProvider as well for UI updates
-    // For now, direct access to authProvider.user is fine for displaying data
-    // and triggering actions. If user data changes need to rebuild parts of UI
-    // not covered by Consumer2, then Consumer3 or nested Consumers might be needed.
 
     return Consumer2<FavoritesProvider, WatchHistoryProvider>(
       builder: (context, favoritesProvider, watchHistoryProvider, child) {
         final favoritesCount = favoritesProvider.favorites.length;
         final watchHistoryCount = watchHistoryProvider.watchHistory.length;
+        final recentHistory =
+            watchHistoryProvider.watchHistory
+                .take(5)
+                .map((video) => WatchHistoryItem.fromVideo(video))
+                .toList();
 
         return Scaffold(
           backgroundColor: const Color(0xFF1A1D21),
@@ -115,7 +116,9 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ],
                               ),
                             ),
-                            if (authProvider.isAuthenticated && authProvider.user?.googleId == null) // Only show edit for non-google users
+                            if (authProvider.isAuthenticated &&
+                                authProvider.user?.googleId ==
+                                    null) // Only show edit for non-google users
                               IconButton(
                                 icon: const Icon(
                                   Icons.edit,
@@ -123,9 +126,13 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ),
                                 onPressed: () {
                                   if (authProvider.user != null) {
-                                    _newUsernameController.text = authProvider.user!.name;
+                                    _newUsernameController.text =
+                                        authProvider.user!.name;
                                   }
-                                  _showUpdateUsernameDialog(context, authProvider);
+                                  _showUpdateUsernameDialog(
+                                    context,
+                                    authProvider,
+                                  );
                                 },
                               ),
                           ],
@@ -248,11 +255,17 @@ class _ProfilePageState extends State<ProfilePage> {
                             // For this subtask, let's make "Pengaturan Akun" show a dialog
                             // that gives options or directly shows change password if username is separate.
                             // Or, we can make it directly trigger change password if edit username is via the top icon.
-                            if (authProvider.isAuthenticated && authProvider.user?.googleId == null) {
-                               _showChangePasswordDialog(context, authProvider);
-                            } else if (authProvider.isAuthenticated && authProvider.user?.googleId != null) {
-                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Akun Google tidak dapat mengubah password disini.')),
+                            if (authProvider.isAuthenticated &&
+                                authProvider.user?.googleId == null) {
+                              _showChangePasswordDialog(context, authProvider);
+                            } else if (authProvider.isAuthenticated &&
+                                authProvider.user?.googleId != null) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Akun Google tidak dapat mengubah password disini.',
+                                  ),
+                                ),
                               );
                             }
                           },
@@ -296,22 +309,9 @@ class _ProfilePageState extends State<ProfilePage> {
                     ),
                   ),
                   const SizedBox(height: 24),
+                  // Watch History Section with actual data
                   WatchHistorySection(
-                    items: [
-                      WatchHistoryItem(
-                        thumbnailUrl:
-                            'https://image.tmdb.org/t/p/w500/yourimage1.jpg',
-                        episodeInfo: 'E1',
-                        title: 'Tarot',
-                      ),
-                      WatchHistoryItem(
-                        thumbnailUrl:
-                            'https://image.tmdb.org/t/p/w500/yourimage2.jpg',
-                        episodeInfo: 'SMusim 5:E8',
-                        title: 'Demon Slayer: Kimetsu...',
-                      ),
-                      // dst.
-                    ],
+                    items: recentHistory,
                     onSeeAll: () {
                       Navigator.push(
                         context,
@@ -330,13 +330,19 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  void _showUpdateUsernameDialog(BuildContext context, AuthProvider authProvider) {
+  void _showUpdateUsernameDialog(
+    BuildContext context,
+    AuthProvider authProvider,
+  ) {
     showDialog(
       context: context,
       builder: (BuildContext dialogContext) {
         return AlertDialog(
           backgroundColor: const Color(0xFF2C2F33),
-          title: const Text('Ubah Username', style: TextStyle(color: Colors.white)),
+          title: const Text(
+            'Ubah Username',
+            style: TextStyle(color: Colors.white),
+          ),
           content: Form(
             key: _usernameFormKey,
             child: TextFormField(
@@ -368,31 +374,52 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           actions: <Widget>[
             TextButton(
-              child: const Text('Batal', style: TextStyle(color: Colors.white70)),
+              child: const Text(
+                'Batal',
+                style: TextStyle(color: Colors.white70),
+              ),
               onPressed: () {
                 Navigator.of(dialogContext).pop();
               },
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE53935)),
-              child: _isLoadingUsername
-                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Text('Simpan'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFE53935),
+              ),
+              child:
+                  _isLoadingUsername
+                      ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                      : const Text('Simpan'),
               onPressed: () async {
                 if (_usernameFormKey.currentState!.validate()) {
                   setState(() {
                     _isLoadingUsername = true;
                   });
                   try {
-                    await authProvider.updateUsername(_newUsernameController.text);
+                    await authProvider.updateUsername(
+                      _newUsernameController.text,
+                    );
                     Navigator.of(dialogContext).pop();
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Username berhasil diperbarui!')),
+                      const SnackBar(
+                        content: Text('Username berhasil diperbarui!'),
+                      ),
                     );
                   } catch (e) {
                     Navigator.of(dialogContext).pop();
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Gagal memperbarui username: ${e.toString()}')),
+                      SnackBar(
+                        content: Text(
+                          'Gagal memperbarui username: ${e.toString()}',
+                        ),
+                      ),
                     );
                   } finally {
                     setState(() {
@@ -408,7 +435,10 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  void _showChangePasswordDialog(BuildContext context, AuthProvider authProvider) {
+  void _showChangePasswordDialog(
+    BuildContext context,
+    AuthProvider authProvider,
+  ) {
     _currentPasswordController.clear();
     _newPasswordController.clear();
     _confirmPasswordController.clear();
@@ -417,10 +447,14 @@ class _ProfilePageState extends State<ProfilePage> {
       builder: (BuildContext dialogContext) {
         return AlertDialog(
           backgroundColor: const Color(0xFF2C2F33),
-          title: const Text('Ubah Password', style: TextStyle(color: Colors.white)),
+          title: const Text(
+            'Ubah Password',
+            style: TextStyle(color: Colors.white),
+          ),
           content: Form(
             key: _passwordFormKey,
-            child: SingleChildScrollView( // Added SingleChildScrollView
+            child: SingleChildScrollView(
+              // Added SingleChildScrollView
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
@@ -430,9 +464,15 @@ class _ProfilePageState extends State<ProfilePage> {
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       labelText: 'Password Saat Ini',
-                      labelStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
+                      labelStyle: TextStyle(
+                        color: Colors.white.withOpacity(0.7),
+                      ),
                     ),
-                    validator: (value) => value!.isEmpty ? 'Password saat ini tidak boleh kosong' : null,
+                    validator:
+                        (value) =>
+                            value!.isEmpty
+                                ? 'Password saat ini tidak boleh kosong'
+                                : null,
                   ),
                   TextFormField(
                     controller: _newPasswordController,
@@ -440,7 +480,9 @@ class _ProfilePageState extends State<ProfilePage> {
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       labelText: 'Password Baru',
-                      labelStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
+                      labelStyle: TextStyle(
+                        color: Colors.white.withOpacity(0.7),
+                      ),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -458,7 +500,9 @@ class _ProfilePageState extends State<ProfilePage> {
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
                       labelText: 'Konfirmasi Password Baru',
-                      labelStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
+                      labelStyle: TextStyle(
+                        color: Colors.white.withOpacity(0.7),
+                      ),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -476,16 +520,29 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
           actions: <Widget>[
             TextButton(
-              child: const Text('Batal', style: TextStyle(color: Colors.white70)),
+              child: const Text(
+                'Batal',
+                style: TextStyle(color: Colors.white70),
+              ),
               onPressed: () {
                 Navigator.of(dialogContext).pop();
               },
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE53935)),
-              child: _isLoadingPassword
-                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Text('Simpan'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFE53935),
+              ),
+              child:
+                  _isLoadingPassword
+                      ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                      : const Text('Simpan'),
               onPressed: () async {
                 if (_passwordFormKey.currentState!.validate()) {
                   setState(() {
@@ -498,15 +555,21 @@ class _ProfilePageState extends State<ProfilePage> {
                     );
                     Navigator.of(dialogContext).pop();
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Password berhasil diubah!')),
+                      const SnackBar(
+                        content: Text('Password berhasil diubah!'),
+                      ),
                     );
                   } catch (e) {
                     // Check if dialogContext is still mounted before showing SnackBar
                     if (!Navigator.of(dialogContext).mounted) return;
-                     // Error might be shown by the dialog itself, or pop and show
+                    // Error might be shown by the dialog itself, or pop and show
                     Navigator.of(dialogContext).pop(); // Pop first
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Gagal mengubah password: ${e.toString()}')),
+                      SnackBar(
+                        content: Text(
+                          'Gagal mengubah password: ${e.toString()}',
+                        ),
+                      ),
                     );
                   } finally {
                     setState(() {
@@ -579,12 +642,24 @@ class WatchHistoryItem {
   final String thumbnailUrl;
   final String episodeInfo;
   final String title;
+  final String id; // Added for video identification
 
   WatchHistoryItem({
     required this.thumbnailUrl,
     required this.episodeInfo,
     required this.title,
+    required this.id,
   });
+
+  // Factory constructor to create from VideoModel
+  factory WatchHistoryItem.fromVideo(dynamic video) {
+    return WatchHistoryItem(
+      id: video.id,
+      thumbnailUrl: video.thumbnailUrl,
+      episodeInfo: video.type.isNotEmpty ? video.type.first : 'Movie',
+      title: video.title,
+    );
+  }
 }
 
 class WatchHistorySection extends StatelessWidget {
@@ -592,10 +667,10 @@ class WatchHistorySection extends StatelessWidget {
   final VoidCallback onSeeAll;
 
   const WatchHistorySection({
-    Key? key,
+    super.key,
     required this.items,
     required this.onSeeAll,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

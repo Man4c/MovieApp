@@ -410,14 +410,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(width: 24),
                       _buildSocialButton(
-                        icon: Icons.facebook,
+                        iconWidget: const Icon(Icons.facebook, color: Colors.white70, size: 24),
                         onTap: () {
                           // TODO: Implement Facebook login
                         },
                       ),
                       const SizedBox(width: 24),
                       _buildSocialButton(
-                        icon: Icons.alternate_email,
+                        iconWidget: const Icon(Icons.alternate_email, color: Colors.white70, size: 24),
                         onTap: () {
                           // TODO: Implement Twitter login
                         },

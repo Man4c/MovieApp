@@ -31,8 +31,8 @@ class _HomeScreenState extends State<HomeScreen> {
     "trending",
     "top_rated",
   ];
-  Map<String, List<VideoModel>> _categorizedVideos = {};
-  Map<String, bool> _isLoadingCategory = {};
+  final Map<String, List<VideoModel>> _categorizedVideos = {};
+  final Map<String, bool> _isLoadingCategory = {};
 
   // State for search results
   List<VideoModel> _searchResults = [];
@@ -411,7 +411,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 );
               }
               return const SizedBox.shrink();
-            }).toList(),
+            }),
             const SizedBox(height: 16),
           ],
         ),
