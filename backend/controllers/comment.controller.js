@@ -58,52 +58,34 @@ export const getMovieComments = async (req, res) => {
   try {
     const { tmdbId: movieId } = req.params; // tmdbId is the movieId
 
-    const comments = await Comment.find({ videoId: movieId }).populate({
-      path: 'userId', // Populate the user field
-      select: 'username _id' // Select username and _id from User model
-    });
+    const comments = await Comment.find({ videoId: movieId })
+                                  .populate({
+                                    path: 'userId',
+                                    select: 'username _id'
+                                  })
+                                  .sort({ createdAt: 1 }); // Sort by creation time
 
     if (!comments) {
       return res.status(404).json({ success: false, message: "Comments not found for this movie" });
     }
 
-    // Map response to include replies array and prepare for nesting
-    const commentMap = {};
-    const nestedComments = [];
-
-    comments.forEach(comment => {
-      const commentData = {
-        id: comment.id, // Use the generated string id
-        videoId: comment.videoId,
-        comment: comment.comment,
-        rating: comment.rating,
-        parentId: comment.parentId,
-        user: { // Changed from userId to user object
-          id: comment.userId._id, // User's original ObjectId
-          name: comment.userId.username // User's name
-        },
-        timestamp: comment.createdAt,
-        replies: [] // Initialize replies array
-      };
-      commentMap[comment.id] = commentData;
-
-      if (comment.parentId) {
-        if (commentMap[comment.parentId]) {
-          commentMap[comment.parentId].replies.push(commentData);
-        } else {
-          // Handle orphaned comment (parent not yet processed or does not exist)
-          // For simplicity, adding to root, but could be handled differently
-          nestedComments.push(commentData);
-        }
-      } else {
-        nestedComments.push(commentData);
-      }
-    });
+    const mappedComments = comments.map(comment => ({
+      id: comment.id,
+      videoId: comment.videoId,
+      comment: comment.comment,
+      rating: comment.rating,
+      user: {
+        id: comment.userId._id,
+        name: comment.userId.username
+      },
+      parentId: comment.parentId ? comment.parentId.toString() : null,
+      timestamp: comment.createdAt,
+    }));
 
     res.status(200).json({
       success: true,
-      count: nestedComments.length, // Count of top-level comments
-      data: nestedComments,
+      count: mappedComments.length,
+      data: mappedComments, // Send the flat list
     });
   } catch (error) {
     res.status(500).json({

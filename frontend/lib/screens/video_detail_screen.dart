@@ -32,16 +32,19 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
   late Animation<double> _ratingScaleAnimation;
 
   // New state variables for comments
-  List<CommentModel> _comments = [];
-  bool _isLoadingComments = true;
-  String? _replyingToCommentId; // To store parentId for a reply
-  String? _activelyReplyingToCommentId; // To control which comment's reply field is open
+  List<CommentModel> _allComments = []; // Changed from _comments
+  Map<String, bool> _expandedReplies = {}; // Tracks expanded state for parent comment IDs
+  String? _replyingToCommentId; // ID of the comment being replied to
+  // final TextEditingController _commentController = TextEditingController(); // Already exists
+  // bool _isLoadingComments = true; // Already exists
+  // String? _activelyReplyingToCommentId; // To be removed
+  FocusNode _commentFocusNode = FocusNode(); // For focusing the input field
 
 
   @override
   void initState() {
     super.initState();
-    _fetchComments(); // Fetch comments on init
+    _fetchComments();
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 300),
       vsync: this,
@@ -65,86 +68,47 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
   Future<void> _fetchComments() async {
     setState(() {
       _isLoadingComments = true;
+      // _replyingToCommentId = null; // Optionally reset reply state
+      // _expandedReplies.clear(); // Optionally reset expanded states
     });
     try {
-      final comments = await ApiService.getVideoComments(widget.video.id);
-      if (mounted) {
-        setState(() {
-          _comments = comments;
-          _isLoadingComments = false;
-        });
-      }
+      _allComments = await ApiService.getVideoComments(widget.video.id);
     } catch (e) {
       if (mounted) {
-        setState(() {
-          _isLoadingComments = false;
-        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error fetching comments: ${e.toString()}')),
         );
       }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingComments = false;
+        });
+      }
     }
   }
 
-  void _handleReplyTapped(String parentId) {
+  void _onToggleReplies(String parentId) {
     setState(() {
-      if (_activelyReplyingToCommentId == parentId) {
-        _activelyReplyingToCommentId = null; // Close if already open
-      } else {
-        _activelyReplyingToCommentId = parentId;
-      }
+      _expandedReplies[parentId] = !(_expandedReplies[parentId] ?? false);
     });
   }
 
-  // Modified to handle direct reply submission from CommentCard
-  Future<void> _submitReplyFromCard(String parentId, String commentText, double rating) async {
-     if (commentText.isEmpty) return;
-    setState(() => _isSubmittingComment = true);
-
-    try {
-      await ApiService.addComment(
-        widget.video.id,
-        commentText,
-        rating, // Using the rating from card, default 0.0 for replies
-        parentId: parentId,
-      );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-           SnackBar(
-            content: const Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.white),
-                SizedBox(width: 8),
-                Text('Reply submitted successfully!'),
-              ],
-            ),
-            backgroundColor: Colors.green,
-          ),
-        );
-        _fetchComments(); // Refresh comments
-        setState(() {
-          _activelyReplyingToCommentId = null; // Close reply input
-        });
-      }
-    } catch (e) {
-       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error submitting reply: ${e.toString()}')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isSubmittingComment = false);
-      }
-    }
+  void _onStartReply(String commentId) {
+    setState(() {
+      _replyingToCommentId = commentId;
+      FocusScope.of(context).requestFocus(_commentFocusNode);
+    });
+    // Scroll to input field if necessary, e.g., using a ScrollController
   }
 
 
   @override
   void dispose() {
-    _commentController.dispose(); // Renamed
+    _commentController.dispose();
     _animationController.dispose();
     _ratingAnimationController.dispose();
+    _commentFocusNode.dispose();
     super.dispose();
   }
 
@@ -163,67 +127,38 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
     return textPainter.didExceedMaxLines;
   }
 
-  // Updated to submit comment/reply
   Future<void> _submitComment() async {
     if (_commentController.text.isEmpty) return;
-
     setState(() => _isSubmittingComment = true);
 
     try {
       await ApiService.addComment(
         widget.video.id,
         _commentController.text,
-        _userRating, // Using existing _userRating, can be changed if rating is not part of comment
-        parentId: _replyingToCommentId, // Pass parentId if it's a reply
+        _userRating, // Or handle rating input if it's still relevant for comments
+        parentId: _replyingToCommentId,
       );
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.white),
-                SizedBox(width: 8),
-                Text(_replyingToCommentId == null ? 'Comment submitted successfully' : 'Reply submitted successfully'),
-              ],
-            ),
-            backgroundColor: Colors.green,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
-        );
-        _commentController.clear();
+      _commentController.clear();
+      if(mounted){
         setState(() {
-          _userRating = 0.0; // Reset rating
-          _replyingToCommentId = null; // Reset replying state
+          _replyingToCommentId = null; // Reset after submitting reply
+          _userRating = 0.0; // Reset rating if used
         });
-        _fetchComments(); // Refresh comments list
+      }
+      _fetchComments(); // Refresh comments
+      if (mounted) {
+         ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_replyingToCommentId == null ? 'Comment added!' : 'Reply added!'), backgroundColor: Colors.green),
+        );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.error, color: Colors.white),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text('Error submitting comment: ${e.toString()}'),
-                ),
-              ],
-            ),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-          ),
+          SnackBar(content: Text('Error submitting comment: ${e.toString()}')),
         );
       }
     } finally {
-      if(mounted) {
+      if(mounted){
         setState(() => _isSubmittingComment = false);
       }
     }
@@ -268,9 +203,6 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
 
         // Authenticated user view
         final bool isFavorite = favoritesProvider.isFavorite(widget.video.id);
-        // The FutureBuilder for reviews is removed as comments are handled by _fetchComments and _comments state
-
-        // Calculate average rating based on current video's rating, can be updated if comments also have ratings
         final double averageRating = widget.video.rating;
 
 
@@ -434,8 +366,8 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
                           ),
                           const SizedBox(height: 24),
                            _buildEnhancedRatingSection(
-                            averageRating, // Use the calculated or video's direct rating
-                            _comments.length, // Use comments length for review count if applicable
+                            averageRating,
+                            _allComments.length, // Use _allComments length
                           ),
                           const SizedBox(height: 24),
                           _buildExpandableDescription(),
@@ -526,7 +458,7 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
     );
   }
 
-  Widget _buildEnhancedRatingSection(double averageRating, int commentCount) { // Updated to commentCount
+  Widget _buildEnhancedRatingSection(double averageRating, int commentCount) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -585,7 +517,7 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
                     }),
                     const SizedBox(width: 8),
                     Text(
-                      '($commentCount comments)', // Updated to commentCount
+                      '($commentCount comments)',
                       style: TextStyle(color: Colors.grey[600], fontSize: 14),
                     ),
                   ],
@@ -671,6 +603,8 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
 
   // New section for comments
   Widget _buildCommentsSection() {
+    final topLevelComments = _allComments.where((c) => c.parentId == null).toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -697,7 +631,7 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
-                '${_comments.length}', // Use _comments length
+                '${topLevelComments.length}', // Use topLevelComments length for count of main comments
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.primary,
                   fontWeight: FontWeight.bold,
@@ -716,23 +650,51 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
         // Comments list
         if (_isLoadingComments)
           _buildLoadingState("Loading comments...") // Updated message
-        else if (_comments.isEmpty)
-          _buildEmptyState("No comments yet. Be the first to comment!") // Updated message
+        else if (topLevelComments.isEmpty)
+          _buildEmptyState("No comments yet. Be the first to comment!")
         else
           ListView.builder(
-            shrinkWrap: true, // Important for ListView inside Column/CustomScrollView
-            physics: const NeverScrollableScrollPhysics(), // Disable scrolling for inner ListView
-            itemCount: _comments.length,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: topLevelComments.length,
             itemBuilder: (context, index) {
-              final comment = _comments[index];
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12.0),
-                child: CommentCard(
-                  comment: comment,
-                  onReplyTapped: _handleReplyTapped,
-                  onReplySubmitted: _submitReplyFromCard,
-                  replyingToId: _activelyReplyingToCommentId,
-                ),
+              final topLevelComment = topLevelComments[index];
+              final repliesForThisComment = _allComments.where((reply) => reply.parentId == topLevelComment.id).toList();
+              final int replyCount = repliesForThisComment.length;
+              bool isExpanded = _expandedReplies[topLevelComment.id] ?? false;
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  CommentCard(
+                    comment: topLevelComment,
+                    replyCount: replyCount,
+                    isExpanded: isExpanded,
+                    onToggleReplies: () => _onToggleReplies(topLevelComment.id),
+                    onStartReply: () => _onStartReply(topLevelComment.id),
+                  ),
+                  if (isExpanded && repliesForThisComment.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(left: 20.0, top: 8.0), // Indent replies
+                      child: Column(
+                        children: repliesForThisComment.map((reply) {
+                          // For simplicity, nested replies don't show "View X replies" or allow further expansion from here
+                          // They can still initiate a new reply to *this* sub-comment via onStartReply
+                           final subReplies = _allComments.where((subReply) => subReply.parentId == reply.id).toList();
+                           final int subReplyCount = subReplies.length;
+                           bool isSubReplyExpanded = _expandedReplies[reply.id] ?? false;
+
+                          return CommentCard(
+                            comment: reply,
+                            replyCount: subReplyCount, // This reply might have its own replies
+                            isExpanded: isSubReplyExpanded, // This reply might be expandable
+                            onToggleReplies: () => _onToggleReplies(reply.id), // Allow toggling sub-replies
+                            onStartReply: () => _onStartReply(reply.id), // Allow replying to this sub-comment
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                ],
               );
             },
           ),
@@ -741,11 +703,21 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
   }
 
   Widget _buildAddCommentInputSection() {
-    // This can be a simplified version or the existing _buildEnhancedAddReviewSection adapted
-    // For now, let's make a simpler one for comments.
-    // If _replyingToCommentId is not null, this input field is for a reply.
-    String hintText = _replyingToCommentId != null ? 'Write your reply...' : 'Add a public comment...';
-    String buttonText = _replyingToCommentId != null ? 'Post Reply' : 'Post Comment';
+    String hintText = 'Add a public comment...';
+    String buttonText = 'Post Comment';
+    String? replyingToUsername;
+
+    if (_replyingToCommentId != null) {
+      final parentComment = _allComments.firstWhere((c) => c.id == _replyingToCommentId, orElse: null);
+      if (parentComment != null) {
+        replyingToUsername = parentComment.userName;
+        hintText = 'Replying to $replyingToUsername...';
+        buttonText = 'Post Reply';
+      } else {
+        // Parent comment not found, might have been deleted or an issue with ID. Fallback.
+         _replyingToCommentId = null;
+      }
+    }
 
     return Container(
       padding: const EdgeInsets.all(15),
@@ -763,18 +735,18 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (_replyingToCommentId != null)
+          if (_replyingToCommentId != null && replyingToUsername != null)
             Padding(
               padding: const EdgeInsets.only(bottom: 8.0),
               child: Row(
                 children: [
-                  Text("Replying to: ${_comments.firstWhere((c) => c.id == _replyingToCommentId, orElse: () => _findCommentRecursive(_comments, _replyingToCommentId!)!).userName}", style: TextStyle(fontWeight: FontWeight.bold)),
+                  Expanded(child: Text("Replying to: $replyingToUsername", style: TextStyle(fontWeight: FontWeight.bold))),
                   IconButton(
-                    icon: Icon(Icons.cancel, size: 18),
+                    icon: Icon(Icons.cancel, size: 20),
                     onPressed: () {
                       setState(() {
                         _replyingToCommentId = null;
-                        _commentController.clear(); // Clear text when cancelling reply
+                        _commentController.clear();
                       });
                     },
                   )
@@ -783,6 +755,7 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
             ),
           TextField(
             controller: _commentController,
+            focusNode: _commentFocusNode,
             maxLines: 3,
             enabled: !_isSubmittingComment,
             decoration: InputDecoration(
@@ -792,9 +765,6 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
             ),
           ),
           const SizedBox(height: 10),
-          // Star rating (optional for comments, can be removed or adapted)
-          // For simplicity, I'm reusing the _userRating state and UI from reviews
-          // This part can be removed if comments don't have ratings.
            if (_replyingToCommentId == null) // Only show rating for top-level comments
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -832,17 +802,10 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
     );
   }
 
-  CommentModel? _findCommentRecursive(List<CommentModel> comments, String id) {
-    for (var comment in comments) {
-      if (comment.id == id) return comment;
-      var foundInReply = _findCommentRecursive(comment.replies, id);
-      if (foundInReply != null) return foundInReply;
-    }
-    return null;
-  }
+  // _findCommentRecursive removed as it's not directly used with the new flat list approach for display.
+  // Parent comment for "Replying to X" is found directly in _allComments.
 
-
-  Widget _buildLoadingState(String message) { // Added message parameter
+  Widget _buildLoadingState(String message) {
     return Container(
       padding: const EdgeInsets.all(20),
       child: const Center(
@@ -850,14 +813,14 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
           children: [
             CircularProgressIndicator(),
             SizedBox(height: 16),
-            Text(message), // Use message parameter
+            Text(message),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildErrorState(String error, {bool isCommentError = false}) { // Added isCommentError
+  Widget _buildErrorState(String error, {bool isCommentError = false}) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -870,13 +833,13 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
           const Icon(Icons.error_outline, color: Colors.red, size: 48),
           const SizedBox(height: 16),
           Text(
-            isCommentError ? 'Error loading comments: $error' : 'Error loading reviews: $error', // Differentiate message
+            isCommentError ? 'Error loading comments: $error' : 'Error: $error',
             style: const TextStyle(color: Colors.red),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
           ElevatedButton.icon(
-            onPressed: () => isCommentError ? _fetchComments() : setState(() {}), // Call _fetchComments for comment errors
+            onPressed: () => isCommentError ? _fetchComments() : setState(() {}),
             icon: const Icon(Icons.refresh),
             label: const Text('Retry'),
             style: ElevatedButton.styleFrom(
@@ -889,7 +852,7 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
     );
   }
 
-  Widget _buildEmptyState(String message) { // Added message parameter
+  Widget _buildEmptyState(String message) {
     return Container(
       padding: const EdgeInsets.all(32),
       child: Column(
@@ -897,7 +860,7 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
           Icon(Icons.comment_outlined, size: 64, color: Colors.grey[400]), // Changed icon
           const SizedBox(height: 16),
           Text(
-            message, // Use message parameter
+            message,
             style: TextStyle(fontSize: 16, color: Colors.grey[600]),
             textAlign: TextAlign.center,
           ),
