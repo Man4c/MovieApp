@@ -17,7 +17,6 @@ const requiredEnvVars = [
   "MONGO_URI",
   "JWT_SECRET",
   "GOOGLE_CLIENT_ID",
-  "GOOGLE_CLIENT_SECRET",
 ];
 
 const missingEnvVars = requiredEnvVars.filter((envVar) => !process.env[envVar]);
@@ -31,9 +30,6 @@ if (missingEnvVars.length > 0) {
     MONGO_URI: process.env.MONGO_URI ? "(set)" : "(not set)",
     JWT_SECRET: process.env.JWT_SECRET ? "(set)" : "(not set)",
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID ? "(set)" : "(not set)",
-    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET
-      ? "(set)"
-      : "(not set)",
   });
   process.exit(1);
 }
