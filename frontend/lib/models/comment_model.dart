@@ -1,4 +1,4 @@
-class CommentModel  {
+class ReviewModel  {
   final String id;
 
   final String videoId;
@@ -12,9 +12,9 @@ class CommentModel  {
   final String userId;
   final String userName;
   final String? parentId;
-  final List<CommentModel> replies;
+  final List<ReviewModel> replies;
   
-  CommentModel({
+  ReviewModel({
     required this.id,
     required this.videoId,
     required this.comment,
@@ -23,11 +23,11 @@ class CommentModel  {
     required this.userId,
     required this.userName,
     this.parentId, // Nullable
-    required this.replies, // List of CommentModel
+    required this.replies, // List of ReviewModel
   });
 
-  factory CommentModel.fromJson(Map<String, dynamic> json) {
-    return CommentModel(
+  factory ReviewModel.fromJson(Map<String, dynamic> json) {
+    return ReviewModel(
       id: json['id'] as String,
       videoId: json['videoId'] as String,
       comment: json['comment'] as String,
@@ -39,7 +39,7 @@ class CommentModel  {
       timestamp: DateTime.parse(json['timestamp'] as String),
       parentId: json['parentId'] as String?,
       replies: (json['replies'] as List<dynamic>? ?? [])
-          .map((e) => CommentModel.fromJson(e as Map<String, dynamic>))
+          .map((e) => ReviewModel.fromJson(e as Map<String, dynamic>))
           .toList(),
     );
   }

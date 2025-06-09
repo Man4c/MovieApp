@@ -3,13 +3,13 @@ import 'package:flutter/material.dart';
 final ThemeData appTheme = ThemeData(
   scaffoldBackgroundColor: const Color(0xFF121212),
   colorScheme: ColorScheme.dark(
-    primary: const Color(0xFF1F80E0),
-    secondary: const Color(0xFF1F80E0),
+    primary: Colors.red,
+    secondary: Colors.red,
     surface: const Color(0xFF1D1D1D),
     onSurface: Colors.white,
   ),
   appBarTheme: const AppBarTheme(
-    backgroundColor: Color(0xFF0B253F),
+    backgroundColor: Colors.red,
     elevation: 0,
     centerTitle: true,
   ),

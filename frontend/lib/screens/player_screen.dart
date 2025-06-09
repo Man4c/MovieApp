@@ -145,12 +145,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
               ],
             ),
             body: SafeArea(
-              child: Column(
-                children: [
-                  Expanded(child: _buildVideoPlayer()),
-                  _buildVideoInfo(),
-                ],
-              ),
+              child: Column(children: [Expanded(child: _buildVideoPlayer())]),
             ),
           );
         },
@@ -198,33 +193,5 @@ class _PlayerScreenState extends State<PlayerScreen> {
     } else {
       return Chewie(controller: _chewieController!);
     }
-  }
-
-  Widget _buildVideoInfo() {
-    return Container(
-      padding: const EdgeInsets.all(16.0),
-      color: Colors.black87,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            widget.video.title,
-            style: const TextStyle(
-              fontSize: 18.0,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 8.0),
-          Text(
-            widget.video.description,
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Colors.white70, fontSize: 14.0),
-          ),
-          const SizedBox(height: 12.0),
-        ],
-      ),
-    );
   }
 }

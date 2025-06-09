@@ -5,8 +5,8 @@ import 'package:flutter_video_app/providers/auth_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_video_app/screens/favorites_screen.dart';
 import 'package:flutter_video_app/screens/discovery_screen.dart';
-import 'package:flutter_video_app/screens/user_profile_screen.dart'; // Added import
-import 'package:flutter_video_app/screens/login_screen.dart'; // Added import
+import 'package:flutter_video_app/screens/user_profile_screen.dart';
+import 'package:flutter_video_app/screens/login_screen.dart';
 import 'package:flutter_video_app/widgets/video_row.dart';
 import 'package:flutter_video_app/widgets/featured_banner_carousel.dart';
 import 'package:flutter_video_app/widgets/video_card.dart';
@@ -128,11 +128,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Using Consumer only for AuthProvider
     return Consumer<AuthProvider>(
       builder: (context, authProvider, _) {
         if (!authProvider.isAuthenticated) {
-          // This logic can be moved to a wrapper widget or handled by routing
           WidgetsBinding.instance.addPostFrameCallback((_) {
             Navigator.of(context).pushReplacementNamed('/login');
           });
@@ -143,25 +141,22 @@ class _HomeScreenState extends State<HomeScreen> {
 
         return Scaffold(
           backgroundColor: Colors.black,
-          appBar: _currentIndex == 0
-              ? null
-              : AppBar(
-                  backgroundColor: Colors.transparent,
-                  elevation: 0,
-                  title: Text(
-                    _getAppBarTitle(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 24,
+          appBar:
+              _currentIndex == 0
+                  ? null
+                  : AppBar(
+                    backgroundColor: Colors.transparent,
+                    elevation: 0,
+                    title: Text(
+                      _getAppBarTitle(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 24,
+                      ),
                     ),
                   ),
-                  // The actions for AppBar are removed here if CircleAvatar was for profile,
-                  // as drawer will handle profile access. If it was for openDrawer,
-                  // AppBar automatically adds a drawer icon if Scaffold.drawer is present.
-                  // The existing IconButton was in actions, let's rely on automatic leading icon.
-                ),
-          drawer: _buildAppDrawer(context, authProvider), // Added drawer
+          drawer: _buildAppDrawer(context, authProvider),
           body: _buildBody(),
           bottomNavigationBar: BottomNavigationBar(
             currentIndex: _currentIndex,
@@ -171,7 +166,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 if (_isSearching) {
                   _isSearching = false;
                   _clearSearch();
-                } 
+                }
               });
             },
             backgroundColor: Colors.black,
@@ -183,7 +178,7 @@ class _HomeScreenState extends State<HomeScreen> {
               BottomNavigationBarItem(
                 icon: Icon(Icons.explore),
                 label: 'Discovery',
-              ), // New Item
+              ),
               BottomNavigationBarItem(
                 icon: Icon(Icons.favorite),
                 label: 'Favorites',
@@ -209,53 +204,95 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildBody() {
-    // Handle tab changes for body content
     if (_currentIndex == 1) {
-      // Discovery Screen
       return const DiscoveryScreen();
     } else if (_currentIndex == 2) {
-      // Favorites Screen
       return const FavoritesScreen();
-    } // Default is Home Screen (index 0)
+    }
     return SafeArea(
       child: Column(
         children: [
-          if (_currentIndex == 0) _buildHomeHeader(),
-
-          // Content Area
+          _buildHomeHeader(), // This will only be built for the Home tab (_currentIndex == 0)
           Expanded(child: _buildHomeContent()),
         ],
       ),
     );
   }
 
+  // MODIFIED: This entire widget has been rebuilt to include the profile avatar.
   Widget _buildHomeHeader() {
     final user = Provider.of<AuthProvider>(context).user;
     String userName = user?.name ?? 'Guest';
+    String userInitial = userName.isNotEmpty ? userName[0].toUpperCase() : 'G';
+    print(userName);
     return Container(
       color: Colors.transparent,
-      padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
+      padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Welcome, $userName',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 28,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          Text(
-            'What to Watch',
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.7),
-              fontSize: 16,
-            ),
-          ),
-          const SizedBox(height: 10),
+          // Row to hold Greeting Text and Profile Avatar
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Column for the text, wrapped in Expanded to take available space
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Hello, $userName', // Personalized greeting
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 25,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    // More engaging subtitle
+                    Text(
+                      "Let's find something to watch.",
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.7),
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 14),
 
-          // Search Bar
+              // CORRECTED: Profile Avatar wrapped in a Builder
+              Builder(
+                builder: (context) {
+                  // This builder provides the correct context
+                  return GestureDetector(
+                    onTap: () {
+                      // This now correctly finds the Scaffold and opens the drawer
+                      Scaffold.of(context).openDrawer();
+                    },
+                    child: CircleAvatar(
+                      radius: 22,
+                      backgroundColor: Colors.red,
+                      child: Text(
+                        userInitial,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 20,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // Search Bar (No changes here)
           Container(
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.1),
@@ -264,7 +301,7 @@ class _HomeScreenState extends State<HomeScreen> {
             child: TextField(
               controller: _searchController,
               decoration: InputDecoration(
-                hintText: 'Search',
+                hintText: 'Search movies and series',
                 hintStyle: TextStyle(color: Colors.white.withOpacity(0.6)),
                 prefixIcon: Icon(
                   Icons.search,
@@ -299,7 +336,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_currentSearchTerm != null && _currentSearchTerm!.isNotEmpty) {
       if (_isLoadingSearch && _searchResults.isEmpty) {
         return const Center(
-          child: CircularProgressIndicator(color: Colors.deepOrange),
+          child: CircularProgressIndicator(color: Colors.red),
         );
       }
       if (_searchResults.isEmpty) {
@@ -336,9 +373,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (anyCategoryLoading &&
         _categorizedVideos.values.every((list) => list.isEmpty)) {
-      return const Center(
-        child: CircularProgressIndicator(color: Colors.deepOrange),
-      );
+      return const Center(child: CircularProgressIndicator(color: Colors.red));
     }
     if (allCategoriesLoadedAndEmpty) {
       return Center(
@@ -369,7 +404,6 @@ class _HomeScreenState extends State<HomeScreen> {
               FeaturedBannerCarousel(
                 featuredVideos: featuredVideos.take(5).toList(),
               ),
-
             ..._homeScreenCategories.map((category) {
               final videosForCategory = _categorizedVideos[category];
               final isLoading = _isLoadingCategory[category] ?? false;
@@ -394,9 +428,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       const SizedBox(height: 12),
                       const Center(
-                        child: CircularProgressIndicator(
-                          color: Colors.deepOrange,
-                        ),
+                        child: CircularProgressIndicator(color: Colors.red),
                       ),
                       const SizedBox(height: 16),
                     ],
@@ -429,7 +461,7 @@ class _HomeScreenState extends State<HomeScreen> {
               accountName: Text(authProvider.user!.name),
               accountEmail: Text(authProvider.user!.email),
               currentAccountPicture: CircleAvatar(
-                backgroundColor: Colors.orange,
+                backgroundColor: Colors.red,
                 child: Text(
                   authProvider.user!.name.isNotEmpty
                       ? authProvider.user!.name[0].toUpperCase()
@@ -437,21 +469,14 @@ class _HomeScreenState extends State<HomeScreen> {
                   style: const TextStyle(fontSize: 40.0, color: Colors.white),
                 ),
               ),
-              decoration: const BoxDecoration(
-                color: Colors.deepOrange,
-              ),
+              decoration: const BoxDecoration(color: Colors.transparent),
             )
           else
             DrawerHeader(
-              decoration: const BoxDecoration(
-                color: Colors.deepOrange,
-              ),
+              decoration: const BoxDecoration(color: Colors.red),
               child: const Text(
                 'Menu',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                ),
+                style: TextStyle(color: Colors.white, fontSize: 24),
               ),
             ),
           if (authProvider.isAuthenticated) ...[
@@ -462,8 +487,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 Navigator.pop(context);
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                      builder: (context) => const ProfilePage()),
+                  MaterialPageRoute(builder: (context) => const ProfilePage()),
                 );
               },
             ),

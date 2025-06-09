@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_video_app/models/video_model.dart';
-import 'package:flutter_video_app/models/review_model.dart';
+import 'package:flutter_video_app/models/comment_model.dart';
 import 'package:flutter_video_app/services/api_service.dart';
 
 class FavoritesProvider with ChangeNotifier {
@@ -52,7 +52,7 @@ class FavoritesProvider with ChangeNotifier {
   Future<List<ReviewModel>> getReviewsForVideo(String videoId) async {
     if (!_reviews.containsKey(videoId)) {
       try {
-        final reviews = await ApiService.getVideoReviews(videoId);
+        final reviews = await ApiService.getVideoComments(videoId);
         _reviews[videoId] = reviews;
       } catch (e) {
         _reviews[videoId] = [];
@@ -64,7 +64,7 @@ class FavoritesProvider with ChangeNotifier {
   
   Future<void> addReview(String videoId, String comment, double rating) async {
     try {
-      final newReview = await ApiService.addReview(videoId, comment, rating);
+      final newReview = await ApiService.addComment(videoId, comment, rating);
       
       if (!_reviews.containsKey(videoId)) {
         _reviews[videoId] = [];

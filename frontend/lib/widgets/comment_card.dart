@@ -3,7 +3,7 @@ import 'package:flutter_video_app/models/comment_model.dart';
 import 'package:intl/intl.dart'; // For date formatting
 
 class CommentCard extends StatelessWidget {
-  final CommentModel comment;
+  final ReviewModel comment;
   final int replyCount;
   final bool isExpanded;
   final VoidCallback onToggleReplies; // Changed from Function(String)

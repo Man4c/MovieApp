@@ -122,8 +122,9 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<void> updateUsername(String newUsername) async {
-    if (_user == null || _token == null)
+    if (_user == null || _token == null) {
       throw Exception('User not authenticated');
+    }
 
     try {
       final updatedUser = await ApiService.updateUsername(newUsername);

@@ -20,7 +20,7 @@ class UserModel {
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
       id: json['_id'] as String? ?? json['id'] as String? ?? '',
-      name: json['username'] as String? ?? '',
+      name: json['username'] as String? ?? 'crespo',
       email: json['email'] as String? ?? '',
       favorites: List<String>.from(json['favorites'] as List? ?? []),
       watchHistory: List<String>.from(

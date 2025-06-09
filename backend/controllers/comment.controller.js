@@ -4,7 +4,7 @@ import Movie from "../models/movie.model.js";
 import User from "../models/user.model.js";
 
 export const addMovieComment = async (req, res) => {
-  try:
+  try{
     const { comment, rating, parentId } = req.body;
     const { tmdbId: movieId } = req.params; // tmdbId is the movieId
     const userId = req.user.id;
@@ -56,14 +56,14 @@ export const addMovieComment = async (req, res) => {
 
 export const getMovieComments = async (req, res) => {
   try {
-    const { tmdbId: movieId } = req.params; // tmdbId is the movieId
+    const { tmdbId: movieId } = req.params; 
 
     const comments = await Comment.find({ videoId: movieId })
                                   .populate({
                                     path: 'userId',
                                     select: 'username _id'
                                   })
-                                  .sort({ createdAt: 1 }); // Sort by creation time
+                                  .sort({ createdAt: 1 }); 
 
     if (!comments) {
       return res.status(404).json({ success: false, message: "Comments not found for this movie" });

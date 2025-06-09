@@ -5,7 +5,11 @@ import 'package:flutter_video_app/widgets/video_card.dart';
 class VideoGrid extends StatelessWidget {
   final List<VideoModel> videos;
 
-  const VideoGrid({super.key, required this.videos, required ScrollController scrollController});
+  const VideoGrid({
+    super.key,
+    required this.videos,
+    required ScrollController scrollController,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -29,8 +33,8 @@ class VideoGrid extends StatelessWidget {
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         childAspectRatio: 0.75,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
+        crossAxisSpacing: 20,
+        mainAxisSpacing: 5,
       ),
       itemCount: videos.length,
       itemBuilder: (context, index) {

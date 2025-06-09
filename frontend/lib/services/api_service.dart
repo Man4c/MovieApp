@@ -5,7 +5,7 @@ import 'package:flutter_video_app/models/comment_model.dart';
 import 'package:flutter_video_app/models/user_model.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://192.168.7.1:4002/api';
+  static const String baseUrl = 'http://192.168.125.1:4002/api';
   static String? _token;
 
   static void setToken(String token) {
@@ -132,7 +132,7 @@ class ApiService {
   }
 
   // Comments endpoints
-  static Future<List<CommentModel>> getVideoComments(String videoId) async {
+  static Future<List<ReviewModel>> getVideoComments(String videoId) async {
     final response = await http.get(
       Uri.parse('$baseUrl/movies/$videoId/comments'),
       headers: _headers,
@@ -142,13 +142,13 @@ class ApiService {
       final data = json.decode(response.body);
 
       return (data['data'] as List)
-          .map((json) => CommentModel.fromJson(json as Map<String, dynamic>))
+          .map((json) => ReviewModel.fromJson(json as Map<String, dynamic>))
           .toList();
     }
     throw _handleError(response);
   }
 
-  static Future<CommentModel> addComment(
+  static Future<ReviewModel> addComment(
     String videoId,
     String comment,
     double rating, // Keep rating for now
@@ -167,7 +167,7 @@ class ApiService {
     if (response.statusCode == 201) {
       final data = json.decode(response.body);
 
-      return CommentModel.fromJson(data['data'] as Map<String, dynamic>);
+      return ReviewModel.fromJson(data['data'] as Map<String, dynamic>);
     }
     throw _handleError(response);
   }

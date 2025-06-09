@@ -22,8 +22,10 @@ class VideoDetailScreen extends StatefulWidget {
 
 class _VideoDetailScreenState extends State<VideoDetailScreen>
     with TickerProviderStateMixin {
-  final TextEditingController _commentController = TextEditingController(); // Renamed
-  double _userRating = 0.0; // Kept for now, can be removed if not used for comments
+  final TextEditingController _commentController =
+      TextEditingController(); // Renamed
+  double _userRating =
+      0.0; // Kept for now, can be removed if not used for comments
   bool _isSubmittingComment = false; // Renamed
   bool _isExpanded = false;
   late AnimationController _animationController;
@@ -32,14 +34,14 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
   late Animation<double> _ratingScaleAnimation;
 
   // New state variables for comments
-  List<CommentModel> _allComments = []; // Changed from _comments
-  Map<String, bool> _expandedReplies = {}; // Tracks expanded state for parent comment IDs
+  List<ReviewModel> _allComments = []; // Changed from _comments
+  Map<String, bool> _expandedReplies =
+      {}; // Tracks expanded state for parent comment IDs
   String? _replyingToCommentId; // ID of the comment being replied to
   // final TextEditingController _commentController = TextEditingController(); // Already exists
-  // bool _isLoadingComments = true; // Already exists
+  bool _isLoadingComments = true; // Already exists
   // String? _activelyReplyingToCommentId; // To be removed
-  FocusNode _commentFocusNode = FocusNode(); // For focusing the input field
-
+  FocusNode _commentFocusNode = FocusNode();
 
   @override
   void initState() {
@@ -102,7 +104,6 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
     // Scroll to input field if necessary, e.g., using a ScrollController
   }
 
-
   @override
   void dispose() {
     _commentController.dispose();
@@ -139,7 +140,7 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
         parentId: _replyingToCommentId,
       );
       _commentController.clear();
-      if(mounted){
+      if (mounted) {
         setState(() {
           _replyingToCommentId = null; // Reset after submitting reply
           _userRating = 0.0; // Reset rating if used
@@ -147,8 +148,13 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
       }
       _fetchComments(); // Refresh comments
       if (mounted) {
-         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(_replyingToCommentId == null ? 'Comment added!' : 'Reply added!'), backgroundColor: Colors.green),
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              _replyingToCommentId == null ? 'Comment added!' : 'Reply added!',
+            ),
+            backgroundColor: Colors.green,
+          ),
         );
       }
     } catch (e) {
@@ -158,12 +164,11 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
         );
       }
     } finally {
-      if(mounted){
+      if (mounted) {
         setState(() => _isSubmittingComment = false);
       }
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -205,7 +210,6 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
         final bool isFavorite = favoritesProvider.isFavorite(widget.video.id);
         final double averageRating = widget.video.rating;
 
-
         return Scaffold(
           body: CustomScrollView(
             slivers: [
@@ -225,14 +229,18 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
                       CachedNetworkImage(
                         imageUrl: widget.video.backdropPath,
                         fit: BoxFit.cover,
-                        placeholder: (context, url) => Container(
-                          color: Colors.grey[900],
-                          child: const Center(child: CircularProgressIndicator()),
-                        ),
-                        errorWidget: (context, url, error) => Container(
-                          color: Colors.grey[900],
-                          child: const Icon(Icons.error, size: 48),
-                        ),
+                        placeholder:
+                            (context, url) => Container(
+                              color: Colors.grey[900],
+                              child: const Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                            ),
+                        errorWidget:
+                            (context, url, error) => Container(
+                              color: Colors.grey[900],
+                              child: const Icon(Icons.error, size: 48),
+                            ),
                       ),
                       Container(
                         decoration: BoxDecoration(
@@ -261,7 +269,9 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
                         end: Alignment.bottomCenter,
                         colors: [
                           Theme.of(context).scaffoldBackgroundColor,
-                          Theme.of(context).scaffoldBackgroundColor.withOpacity(0.95),
+                          Theme.of(
+                            context,
+                          ).scaffoldBackgroundColor.withOpacity(0.95),
                         ],
                       ),
                     ),
@@ -279,7 +289,9 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
                                   children: [
                                     Text(
                                       widget.video.title,
-                                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.titleLarge?.copyWith(
                                         fontSize: 28,
                                         fontWeight: FontWeight.bold,
                                         letterSpacing: -0.5,
@@ -292,8 +304,12 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
                                       decoration: BoxDecoration(
                                         gradient: LinearGradient(
                                           colors: [
-                                            Theme.of(context).colorScheme.primary,
-                                            Theme.of(context).colorScheme.secondary,
+                                            Theme.of(
+                                              context,
+                                            ).colorScheme.primary,
+                                            Theme.of(
+                                              context,
+                                            ).colorScheme.secondary,
                                           ],
                                         ),
                                         borderRadius: BorderRadius.circular(2),
@@ -307,7 +323,10 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
                                   shape: BoxShape.circle,
                                   boxShadow: [
                                     BoxShadow(
-                                      color: isFavorite ? Colors.red.withOpacity(0.3) : Colors.grey.withOpacity(0.2),
+                                      color:
+                                          isFavorite
+                                              ? Colors.red.withOpacity(0.3)
+                                              : Colors.grey.withOpacity(0.2),
                                       blurRadius: 8,
                                       spreadRadius: 2,
                                     ),
@@ -317,20 +336,29 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
                                   icon: AnimatedSwitcher(
                                     duration: const Duration(milliseconds: 300),
                                     child: Icon(
-                                      isFavorite ? Icons.favorite : Icons.favorite_border,
+                                      isFavorite
+                                          ? Icons.favorite
+                                          : Icons.favorite_border,
                                       key: ValueKey(isFavorite),
-                                      color: isFavorite ? Colors.red : Colors.grey,
+                                      color:
+                                          isFavorite ? Colors.red : Colors.grey,
                                       size: 28,
                                     ),
                                   ),
                                   onPressed: () async {
                                     try {
-                                      await favoritesProvider.toggleFavorite(widget.video);
+                                      await favoritesProvider.toggleFavorite(
+                                        widget.video,
+                                      );
                                     } catch (e) {
                                       if (mounted) {
-                                        ScaffoldMessenger.of(context).showSnackBar(
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).showSnackBar(
                                           SnackBar(
-                                            content: Text('Error updating favorites: ${e.toString()}'),
+                                            content: Text(
+                                              'Error updating favorites: ${e.toString()}',
+                                            ),
                                             backgroundColor: Colors.red,
                                             behavior: SnackBarBehavior.floating,
                                           ),
@@ -348,7 +376,10 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
                             runSpacing: 8,
                             children: [
                               _buildEnhancedInfoChip(
-                                widget.video.type.take(1).join(', ').toUpperCase(),
+                                widget.video.type
+                                    .take(1)
+                                    .join(', ')
+                                    .toUpperCase(),
                                 _getTypeColor(widget.video.type.join(', ')),
                                 Icons.movie_outlined,
                               ),
@@ -365,7 +396,7 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
                             ],
                           ),
                           const SizedBox(height: 24),
-                           _buildEnhancedRatingSection(
+                          _buildEnhancedRatingSection(
                             averageRating,
                             _allComments.length, // Use _allComments length
                           ),
@@ -383,7 +414,9 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
                               borderRadius: BorderRadius.circular(16),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.primary.withOpacity(0.3),
                                   blurRadius: 12,
                                   offset: const Offset(0, 6),
                                 ),
@@ -394,14 +427,22 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => PlayerScreen(video: widget.video),
+                                    builder:
+                                        (context) =>
+                                            PlayerScreen(video: widget.video),
                                   ),
                                 );
                               },
-                              icon: const Icon(Icons.play_circle_fill, size: 24),
+                              icon: const Icon(
+                                Icons.play_circle_fill,
+                                size: 24,
+                              ),
                               label: const Text(
                                 Constants.watchNowButton,
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.transparent,
@@ -430,7 +471,8 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
     );
   }
 
-  Widget _buildEnhancedInfoChip(String label, Color color, IconData icon) { // Keep this helper
+  Widget _buildEnhancedInfoChip(String label, Color color, IconData icon) {
+    // Keep this helper
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
@@ -530,7 +572,8 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
     );
   }
 
-  Widget _buildExpandableDescription() { // Keep this helper
+  Widget _buildExpandableDescription() {
+    // Keep this helper
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -603,7 +646,8 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
 
   // New section for comments
   Widget _buildCommentsSection() {
-    final topLevelComments = _allComments.where((c) => c.parentId == null).toList();
+    final topLevelComments =
+        _allComments.where((c) => c.parentId == null).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -659,7 +703,10 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
             itemCount: topLevelComments.length,
             itemBuilder: (context, index) {
               final topLevelComment = topLevelComments[index];
-              final repliesForThisComment = _allComments.where((reply) => reply.parentId == topLevelComment.id).toList();
+              final repliesForThisComment =
+                  _allComments
+                      .where((reply) => reply?.parentId == topLevelComment.id)
+                      .toList();
               final int replyCount = repliesForThisComment.length;
               bool isExpanded = _expandedReplies[topLevelComment.id] ?? false;
 
@@ -675,23 +722,42 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
                   ),
                   if (isExpanded && repliesForThisComment.isNotEmpty)
                     Padding(
-                      padding: const EdgeInsets.only(left: 20.0, top: 8.0), // Indent replies
+                      padding: const EdgeInsets.only(
+                        left: 20.0,
+                        top: 8.0,
+                      ), // Indent replies
                       child: Column(
-                        children: repliesForThisComment.map((reply) {
-                          // For simplicity, nested replies don't show "View X replies" or allow further expansion from here
-                          // They can still initiate a new reply to *this* sub-comment via onStartReply
-                           final subReplies = _allComments.where((subReply) => subReply.parentId == reply.id).toList();
-                           final int subReplyCount = subReplies.length;
-                           bool isSubReplyExpanded = _expandedReplies[reply.id] ?? false;
+                        children:
+                            repliesForThisComment.map((reply) {
+                              // For simplicity, nested replies don't show "View X replies" or allow further expansion from here
+                              // They can still initiate a new reply to *this* sub-comment via onStartReply
+                              final subReplies =
+                                  _allComments
+                                      .where(
+                                        (subReply) =>
+                                            subReply.parentId == reply.id,
+                                      )
+                                      .toList();
+                              final int subReplyCount = subReplies.length;
+                              bool isSubReplyExpanded =
+                                  _expandedReplies[reply.id] ?? false;
 
-                          return CommentCard(
-                            comment: reply,
-                            replyCount: subReplyCount, // This reply might have its own replies
-                            isExpanded: isSubReplyExpanded, // This reply might be expandable
-                            onToggleReplies: () => _onToggleReplies(reply.id), // Allow toggling sub-replies
-                            onStartReply: () => _onStartReply(reply.id), // Allow replying to this sub-comment
-                          );
-                        }).toList(),
+                              return CommentCard(
+                                comment: reply,
+                                replyCount:
+                                    subReplyCount, // This reply might have its own replies
+                                isExpanded:
+                                    isSubReplyExpanded, // This reply might be expandable
+                                onToggleReplies:
+                                    () => _onToggleReplies(
+                                      reply.id,
+                                    ), // Allow toggling sub-replies
+                                onStartReply:
+                                    () => _onStartReply(
+                                      reply.id,
+                                    ), // Allow replying to this sub-comment
+                              );
+                            }).toList(),
                       ),
                     ),
                 ],
@@ -708,14 +774,17 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
     String? replyingToUsername;
 
     if (_replyingToCommentId != null) {
-      final parentComment = _allComments.firstWhere((c) => c.id == _replyingToCommentId, orElse: null);
+      final parentComment = _allComments.firstWhere(
+        (c) => c?.id == _replyingToCommentId,
+        orElse: null,
+      );
       if (parentComment != null) {
         replyingToUsername = parentComment.userName;
         hintText = 'Replying to $replyingToUsername...';
         buttonText = 'Post Reply';
       } else {
         // Parent comment not found, might have been deleted or an issue with ID. Fallback.
-         _replyingToCommentId = null;
+        _replyingToCommentId = null;
       }
     }
 
@@ -740,7 +809,12 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
               padding: const EdgeInsets.only(bottom: 8.0),
               child: Row(
                 children: [
-                  Expanded(child: Text("Replying to: $replyingToUsername", style: TextStyle(fontWeight: FontWeight.bold))),
+                  Expanded(
+                    child: Text(
+                      "Replying to: $replyingToUsername",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
                   IconButton(
                     icon: Icon(Icons.cancel, size: 20),
                     onPressed: () {
@@ -749,7 +823,7 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
                         _commentController.clear();
                       });
                     },
-                  )
+                  ),
                 ],
               ),
             ),
@@ -760,12 +834,15 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
             enabled: !_isSubmittingComment,
             decoration: InputDecoration(
               hintText: hintText,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
               contentPadding: const EdgeInsets.all(10),
             ),
           ),
           const SizedBox(height: 10),
-           if (_replyingToCommentId == null) // Only show rating for top-level comments
+          if (_replyingToCommentId ==
+              null) // Only show rating for top-level comments
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(5, (index) {
@@ -774,28 +851,42 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
                     index < _userRating ? Icons.star : Icons.star_border,
                     color: index < _userRating ? Colors.amber : Colors.grey,
                   ),
-                  onPressed: _isSubmittingComment ? null : () {
-                    setState(() {
-                      _userRating = index + 1.0;
-                    });
-                  },
+                  onPressed:
+                      _isSubmittingComment
+                          ? null
+                          : () {
+                            setState(() {
+                              _userRating = index + 1.0;
+                            });
+                          },
                 );
               }),
             ),
           const SizedBox(height: 10),
           ElevatedButton(
-            onPressed: _isSubmittingComment || _commentController.text.isEmpty
-                ? null
-                : _submitComment,
+            onPressed:
+                _isSubmittingComment || _commentController.text.isEmpty
+                    ? null
+                    : _submitComment,
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.primary,
               foregroundColor: Colors.white,
               minimumSize: const Size(double.infinity, 45),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
             ),
-            child: _isSubmittingComment
-                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                : Text(buttonText),
+            child:
+                _isSubmittingComment
+                    ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                    : Text(buttonText),
           ),
         ],
       ),
@@ -813,7 +904,7 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
           children: [
             CircularProgressIndicator(),
             SizedBox(height: 16),
-            Text(message),
+            Text("Loading"),
           ],
         ),
       ),
@@ -839,7 +930,8 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
           ),
           const SizedBox(height: 16),
           ElevatedButton.icon(
-            onPressed: () => isCommentError ? _fetchComments() : setState(() {}),
+            onPressed:
+                () => isCommentError ? _fetchComments() : setState(() {}),
             icon: const Icon(Icons.refresh),
             label: const Text('Retry'),
             style: ElevatedButton.styleFrom(
@@ -857,7 +949,11 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
       padding: const EdgeInsets.all(32),
       child: Column(
         children: [
-          Icon(Icons.comment_outlined, size: 64, color: Colors.grey[400]), // Changed icon
+          Icon(
+            Icons.comment_outlined,
+            size: 64,
+            color: Colors.grey[400],
+          ), // Changed icon
           const SizedBox(height: 16),
           Text(
             message,
