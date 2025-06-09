@@ -14,14 +14,14 @@ import 'package:flutter_stripe/flutter_stripe.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  Stripe.publishableKey = 'pk_test_YOUR_STRIPE_PUBLISHABLE_KEY'; // Replace with actual or placeholder
-  await Stripe.instance.applySettings(); // Apply settings if needed
+  Stripe.publishableKey =
+      'pk_test_51RY4uWFJqSjpkwgibRAHFiYNTc4eNQGFOT9dJqy2SMaDXCmEqpPLREjn8tzwljV20rlbMj0CoxZZA2sO2JGAaK4X00TQgsctYR';
+  await Stripe.instance.applySettings();
 
   if (Platform.isAndroid) {
-    await GoogleSignIn().signOut(); // Clear any existing sign in
-    GoogleSignIn.standard(); // Initialize with default scopes
+    await GoogleSignIn().signOut();
+    GoogleSignIn.standard();
   }
-
   runApp(const MyApp());
 }
 

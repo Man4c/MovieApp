@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_video_app/models/video_model.dart';
+import 'package:flutter_video_app/screens/subscription_screen.dart';
 import 'package:flutter_video_app/services/api_service.dart';
 import 'package:flutter_video_app/providers/auth_provider.dart';
 import 'package:provider/provider.dart';
@@ -363,7 +364,6 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    // Default Home Content (existing logic)
     bool anyCategoryLoading = _isLoadingCategory.values.any(
       (isLoading) => isLoading,
     );
@@ -452,11 +452,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 String subscriptionText = 'No active subscription.';
 
                 if (user != null && user.subscription != null) {
-                  subscriptionText = 'Stripe Customer ID: ${user.stripeCustomerId ?? "Not set"}\n'
-                                     'Subscription ID: ${user.subscription!.subscriptionId ?? "N/A"}\n'
-                                     'Plan ID: ${user.subscription!.planId ?? "N/A"}\n'
-                                     'Status: ${user.subscription!.status ?? "N/A"}\n'
-                                     'Ends: ${user.subscription!.currentPeriodEnd?.toLocal().toString() ?? "N/A"}';
+                  subscriptionText =
+                      'Stripe Customer ID: ${user.stripeCustomerId ?? "Not set"}\n'
+                      'Subscription ID: ${user.subscription!.subscriptionId ?? "N/A"}\n'
+                      'Plan ID: ${user.subscription!.planId ?? "N/A"}\n'
+                      'Status: ${user.subscription!.status ?? "N/A"}\n'
+                      'Ends: ${user.subscription!.currentPeriodEnd?.toLocal().toString() ?? "N/A"}';
                   if (user.subscription!.status == 'active') {
                     isActiveSubscriber = true;
                   }
@@ -468,39 +469,65 @@ class _HomeScreenState extends State<HomeScreen> {
                       padding: const EdgeInsets.all(16.0),
                       child: Text(
                         'Subscription Details:',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white),
+                        style: Theme.of(context).textTheme.headlineSmall
+                            ?.copyWith(color: Colors.white),
                       ),
                     ),
                     Card(
                       margin: const EdgeInsets.symmetric(horizontal: 16.0),
                       child: ListTile(
-                        title: Text(isActiveSubscriber ? 'Premium Access Enabled' : 'Premium Access Locked'),
+                        title: Text(
+                          isActiveSubscriber
+                              ? 'Premium Access Enabled'
+                              : 'Premium Access Locked',
+                        ),
                         subtitle: Text(subscriptionText),
                         leading: Icon(
                           isActiveSubscriber ? Icons.star : Icons.lock,
-                          color: isActiveSubscriber ? Colors.amber : Colors.grey,
+                          color:
+                              isActiveSubscriber ? Colors.amber : Colors.grey,
                         ),
                         trailing: ElevatedButton(
                           onPressed: () {
                             if (isActiveSubscriber) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('You already have premium access!')),
+                                const SnackBar(
+                                  content: Text(
+                                    'You already have premium access!',
+                                  ),
+                                ),
                               );
                             } else {
-                              // Navigator.of(context).pushNamed(SubscriptionScreen.routeName); // Assuming routeName is set
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder:
+                                      (context) => const SubscriptionScreen(),
+                                ),
+                              );
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Navigating to subscription screen... (Not implemented)')),
+                                const SnackBar(
+                                  content: Text(
+                                    'Navigating to subscription screen... (Not implemented)',
+                                  ),
+                                ),
                               );
                             }
                           },
-                          child: Text(isActiveSubscriber ? 'View Features' : 'Upgrade Now'),
+                          child: Text(
+                            isActiveSubscriber
+                                ? 'View Features'
+                                : 'Upgrade Now',
+                          ),
                         ),
                       ),
                     ),
                     if (isActiveSubscriber)
                       Padding(
                         padding: const EdgeInsets.all(16.0),
-                        child: Text('Welcome to Premium Content!', style: TextStyle(fontSize: 18, color: Colors.green)),
+                        child: Text(
+                          'Welcome to Premium Content!',
+                          style: TextStyle(fontSize: 18, color: Colors.green),
+                        ),
                       ),
                     Padding(
                       padding: const EdgeInsets.all(8.0),
@@ -508,7 +535,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         onPressed: () async {
                           await authProvider.refreshUserData();
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('User data refresh attempted.')),
+                            const SnackBar(
+                              content: Text('User data refresh attempted.'),
+                            ),
                           );
                         },
                         child: const Text('Refresh User Data (Test)'),

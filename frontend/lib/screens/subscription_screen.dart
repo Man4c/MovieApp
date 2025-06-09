@@ -1,10 +1,26 @@
 import 'package:flutter/material.dart';
-// import 'package:provider/provider.dart'; // Uncomment if using a provider for state
-import 'package:flutter_video_app/services/api_service.dart'; // Uncomment when calling API
-import 'package:flutter_stripe/flutter_stripe.dart';
+import 'package:flutter_video_app/services/api_service.dart';
+import 'package:flutter_stripe/flutter_stripe.dart' hide Card;
+
+// <-- FIX: Data model for type safety
+class Plan {
+  final String id;
+  final String stripePriceId;
+  final String name;
+  final String price;
+  final String description;
+
+  const Plan({
+    required this.id,
+    required this.stripePriceId,
+    required this.name,
+    required this.price,
+    required this.description,
+  });
+}
 
 class SubscriptionScreen extends StatefulWidget {
-  static const String routeName = '/subscription'; // For navigation
+  static const String routeName = '/subscription';
 
   const SubscriptionScreen({super.key});
 
@@ -13,127 +29,167 @@ class SubscriptionScreen extends StatefulWidget {
 }
 
 class _SubscriptionScreenState extends State<SubscriptionScreen> {
-  String? _selectedPlan; // To keep track of the selected plan
-  bool _isLoading = false; // To show a loading indicator
+  Plan? _selectedPlan; // <-- FIX: Use the Plan object for state
+  bool _isLoading = false;
 
-  // Hardcoded plans for now
-  final List<Map<String, dynamic>> _plans = [
-    {'id': 'basic', 'name': 'Basic Plan', 'price': '\$5/month', 'description': 'Access to basic features.'},
-    {'id': 'premium', 'name': 'Premium Plan', 'price': '\$10/month', 'description': 'Access to all premium features.'},
+  // <-- FIX: Use the Plan model. Replace with your actual Stripe Price IDs!
+  final List<Plan> _plans = [
+    Plan(
+      id: 'basic',
+      stripePriceId: 'prod_STA3xw2jK55AH0', // Get from Stripe Dashboard
+      name: 'Basic Plan',
+      price: '\$5/month',
+      description: 'Access to basic features.',
+    ),
+    Plan(
+      id: 'premium',
+      stripePriceId: 'prod_STA0cSHWDDqN8e', // Get from Stripe Dashboard
+      name: 'Premium Plan',
+      price: '\$10/month',
+      description: 'Access to all premium features.',
+    ),
   ];
 
-  void _handlePlanSelection(String planId) {
+  void _handlePlanSelection(Plan plan) {
     setState(() {
-      _selectedPlan = planId;
+      _selectedPlan = plan;
     });
-    // In the next step, we'll call the backend here.
-    print('Selected plan: $planId');
-    // _initiatePayment(planId); // This will be implemented later
+    print('Selected plan: ${plan.name}');
   }
 
-  Future<void> _initiatePayment(String planId) async {
-    setState(() { _isLoading = true; });
-    ScaffoldMessenger.of(context).hideCurrentSnackBar(); // Hide previous snackbars
+  Future<void> _initiatePayment(Plan plan) async {
+    setState(() {
+      _isLoading = true;
+    });
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
     try {
-      // Placeholder for userId - in a real app, get this from your AuthProvider
+      // In a real app, get this from your AuthProvider/state management
       const String userId = 'currentUserPlaceholderId';
       if (userId.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Error: User not logged in.')),
         );
-        setState(() { _isLoading = false; });
+        setState(() {
+          _isLoading = false;
+        });
         return;
       }
 
-      final Map<String, dynamic> response = await ApiService.createPaymentIntent(userId, planId);
-      final String? clientSecret = response['clientSecret'] as String?; // Make sure to cast and check for null
+      // <-- FIX: Pass the stripePriceId to your backend!
+      final Map<String, dynamic> response =
+          await ApiService.createPaymentIntent(userId, plan.stripePriceId);
+      final String? clientSecret = response['clientSecret'] as String?;
 
       if (clientSecret == null || clientSecret.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error: Could not retrieve payment details from server.')),
+          const SnackBar(
+            content: Text(
+              'Error: Could not retrieve payment details from server.',
+            ),
+          ),
         );
-        setState(() { _isLoading = false; });
+        setState(() {
+          _isLoading = false;
+        });
         return;
       }
 
       await Stripe.instance.initPaymentSheet(
         paymentSheetParameters: SetupPaymentSheetParameters(
           paymentIntentClientSecret: clientSecret,
-          merchantDisplayName: 'Your App Name', // Replace with your app name
-          // customerId: response['customerId'], // Optional: if you have it from backend
-          // customerEphemeralKeySecret: response['ephemeralKey'], // Optional: for saving cards
+          merchantDisplayName: 'Your Movie App',
         ),
       );
 
       await Stripe.instance.presentPaymentSheet();
 
-      // After payment sheet is presented and payment is attempted
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Payment attempt completed. Checking status...')),
+        const SnackBar(
+          content: Text(
+            'Payment successful! Your account will be updated shortly.',
+          ),
+        ),
       );
-      // NOTE: The actual success/failure is confirmed via webhooks on the backend.
-      // The app gets an immediate client-side indication, but the source of truth is your backend.
-      // You might want to navigate the user to a "pending" or "success" screen,
-      // and then update based on backend confirmation.
-
+      // Success! You can navigate away or show a success dialog.
+      // The backend webhook will handle the actual subscription activation.
     } on StripeException catch (e) {
       print('StripeException: ${e.toString()}');
+      // <-- FIX: Access the error message correctly.
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Payment Error: ${e.message ?? e.toString()}')),
+        SnackBar(
+          content: Text(
+            'Payment Error: ${e.error.message ?? 'An unknown error occurred'}',
+          ),
+        ),
       );
     } catch (e) {
       print('Error during payment: ${e.toString()}');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('An unexpected error occurred: ${e.toString()}')),
+        SnackBar(
+          content: Text('An unexpected error occurred: ${e.toString()}'),
+        ),
       );
     } finally {
-      setState(() { _isLoading = false; });
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Choose a Subscription Plan'),
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : ListView.builder(
-              itemCount: _plans.length,
-              itemBuilder: (context, index) {
-                final plan = _plans[index];
-                return Card(
-                  margin: const EdgeInsets.all(8.0),
-                  child: ListTile(
-                    title: Text(plan['name'] as String),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(plan['price'] as String),
-                        Text(plan['description'] as String),
-                      ],
+      appBar: AppBar(title: const Text('Choose a Subscription Plan')),
+      body:
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : ListView.builder(
+                itemCount: _plans.length,
+                itemBuilder: (context, index) {
+                  final Plan plan = _plans[index]; // <-- FIX: Strongly typed
+                  return Card(
+                    margin: const EdgeInsets.all(8.0),
+                    child: ListTile(
+                      // <-- FIX: Clean and type-safe property access
+                      title: Text(plan.name),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(plan.price),
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4.0),
+                            child: Text(plan.description),
+                          ),
+                        ],
+                      ),
+                      trailing:
+                          _selectedPlan?.id == plan.id
+                              ? const Icon(
+                                Icons.check_circle,
+                                color: Colors.green,
+                              )
+                              : const Icon(Icons.radio_button_unchecked),
+                      onTap: () => _handlePlanSelection(plan),
                     ),
-                    trailing: _selectedPlan == plan['id']
-                        ? const Icon(Icons.check_circle, color: Colors.green)
-                        : const Icon(Icons.radio_button_unchecked),
-                    onTap: () => _handlePlanSelection(plan['id'] as String),
-                  ),
-                );
-              },
-            ),
-      floatingActionButton: _selectedPlan != null
-          ? FloatingActionButton.extended(
-              onPressed: _isLoading ? null : () { // Disable button when loading
-                if (_selectedPlan != null) {
-                  _initiatePayment(_selectedPlan!);
-                }
-              },
-              label: const Text('Proceed to Payment'),
-              icon: const Icon(Icons.payment),
-            )
-          : null,
+                  );
+                },
+              ),
+      floatingActionButton:
+          _selectedPlan != null
+              ? FloatingActionButton.extended(
+                onPressed:
+                    _isLoading
+                        ? null
+                        : () {
+                          if (_selectedPlan != null) {
+                            _initiatePayment(_selectedPlan!);
+                          }
+                        },
+                label: const Text('Proceed to Payment'),
+                icon: const Icon(Icons.payment),
+              )
+              : null,
     );
   }
 }

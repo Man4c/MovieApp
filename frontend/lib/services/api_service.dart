@@ -5,7 +5,7 @@ import 'package:flutter_video_app/models/comment_model.dart';
 import 'package:flutter_video_app/models/user_model.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://192.168.125.1:4002/api';
+  static const String baseUrl = 'http://192.168.231.1:4002/api';
   static String? _token;
 
   static void setToken(String token) {
