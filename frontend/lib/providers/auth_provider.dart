@@ -242,4 +242,26 @@ class AuthProvider with ChangeNotifier {
       await logout();
     }
   }
+
+  Future<void> refreshUserData() async {
+    if (_token == null) {
+      print('Cannot refresh user data: No token available.');
+      // Optionally throw an error or handle as appropriate
+      return;
+    }
+    try {
+      print('Refreshing user data...');
+      // Assuming ApiService.getCurrentUser() fetches the full user profile
+      // including any new subscription details.
+      final UserModel updatedUser = await ApiService.getCurrentUser();
+      _user = updatedUser;
+      await _saveAuthState(); // Save the updated user details
+      notifyListeners();
+      print('User data refreshed.');
+    } catch (e) {
+      print('Error refreshing user data: $e');
+      // Handle error appropriately, e.g., if it's an auth error, maybe logout
+      // if (e is YouAuthException && e.statusCode == 401) await logout();
+    }
+  }
 }

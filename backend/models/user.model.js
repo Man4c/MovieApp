@@ -58,6 +58,26 @@ const userSchema = new mongoose.Schema(
       },
     ],
 
+    stripeCustomerId: {
+      type: String,
+    },
+
+    subscription: {
+      subscriptionId: {
+        type: String,
+      },
+      planId: {
+        type: String,
+      },
+      status: {
+        type: String,
+        enum: ["active", "canceled", "past_due", "inactive"],
+      },
+      currentPeriodEnd: {
+        type: Date,
+      },
+    },
+
     role: {
       type: String,
       enum: ["customer", "admin"],

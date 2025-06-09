@@ -444,6 +444,80 @@ class _HomeScreenState extends State<HomeScreen> {
               }
               return const SizedBox.shrink();
             }),
+            // Subscription Details Section
+            Consumer<AuthProvider>(
+              builder: (context, authProvider, child) {
+                final user = authProvider.user;
+                bool isActiveSubscriber = false;
+                String subscriptionText = 'No active subscription.';
+
+                if (user != null && user.subscription != null) {
+                  subscriptionText = 'Stripe Customer ID: ${user.stripeCustomerId ?? "Not set"}\n'
+                                     'Subscription ID: ${user.subscription!.subscriptionId ?? "N/A"}\n'
+                                     'Plan ID: ${user.subscription!.planId ?? "N/A"}\n'
+                                     'Status: ${user.subscription!.status ?? "N/A"}\n'
+                                     'Ends: ${user.subscription!.currentPeriodEnd?.toLocal().toString() ?? "N/A"}';
+                  if (user.subscription!.status == 'active') {
+                    isActiveSubscriber = true;
+                  }
+                }
+
+                return Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(
+                        'Subscription Details:',
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white),
+                      ),
+                    ),
+                    Card(
+                      margin: const EdgeInsets.symmetric(horizontal: 16.0),
+                      child: ListTile(
+                        title: Text(isActiveSubscriber ? 'Premium Access Enabled' : 'Premium Access Locked'),
+                        subtitle: Text(subscriptionText),
+                        leading: Icon(
+                          isActiveSubscriber ? Icons.star : Icons.lock,
+                          color: isActiveSubscriber ? Colors.amber : Colors.grey,
+                        ),
+                        trailing: ElevatedButton(
+                          onPressed: () {
+                            if (isActiveSubscriber) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('You already have premium access!')),
+                              );
+                            } else {
+                              // Navigator.of(context).pushNamed(SubscriptionScreen.routeName); // Assuming routeName is set
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Navigating to subscription screen... (Not implemented)')),
+                              );
+                            }
+                          },
+                          child: Text(isActiveSubscriber ? 'View Features' : 'Upgrade Now'),
+                        ),
+                      ),
+                    ),
+                    if (isActiveSubscriber)
+                      Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Text('Welcome to Premium Content!', style: TextStyle(fontSize: 18, color: Colors.green)),
+                      ),
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          await authProvider.refreshUserData();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('User data refresh attempted.')),
+                          );
+                        },
+                        child: const Text('Refresh User Data (Test)'),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
             const SizedBox(height: 16),
           ],
         ),

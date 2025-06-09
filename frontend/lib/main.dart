@@ -10,9 +10,12 @@ import 'package:flutter_video_app/screens/login_screen.dart';
 import 'package:flutter_video_app/utils/theme.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'dart:io';
+import 'package:flutter_stripe/flutter_stripe.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  Stripe.publishableKey = 'pk_test_YOUR_STRIPE_PUBLISHABLE_KEY'; // Replace with actual or placeholder
+  await Stripe.instance.applySettings(); // Apply settings if needed
 
   if (Platform.isAndroid) {
     await GoogleSignIn().signOut(); // Clear any existing sign in

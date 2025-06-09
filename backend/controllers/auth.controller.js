@@ -40,6 +40,8 @@ export const signup = async (req, res) => {
         email: createdUser.email,
         role: createdUser.role, // Include role
         favorites: createdUser.favorites || [], // Include favorites
+        stripeCustomerId: createdUser.stripeCustomerId,
+        subscription: createdUser.subscription
       },
       messages: "User created successfully", // Message typo corrected from "messages"
     });
@@ -78,6 +80,8 @@ export const login = async (req, res) => {
         email: user.email,
         role: user.role, // Include role
         favorites: user.favorites || [], // Include favorites
+        stripeCustomerId: user.stripeCustomerId,
+        subscription: user.subscription
       },
       message: "Logged in successfully",
     });
@@ -119,6 +123,8 @@ export const verifyGoogleToken = async (req, res) => {
           role: user.role,
           favorites: user.favorites || [],
           googleId: user.googleId,
+          stripeCustomerId: user.stripeCustomerId,
+          subscription: user.subscription
         },
         message: "Google authentication successful",
       });
@@ -162,6 +168,8 @@ export const verifyGoogleToken = async (req, res) => {
         role: user.role,
         favorites: user.favorites || [],
         googleId: user.googleId,
+        stripeCustomerId: user.stripeCustomerId,
+        subscription: user.subscription
       },
       message: "Google user registered and logged in successfully",
     });

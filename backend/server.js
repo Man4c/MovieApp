@@ -6,6 +6,7 @@ import moviesRoutes from "./routes/movie.route.js";
 import authRoutes from "./routes/auth.route.js";
 import userRoutes from "./routes/user.route.js";
 import genreRoutes from "./routes/genre.route.js";
+import paymentRoutes from './routes/payment.route.js';
 import passport from "./config/passport-setup.js";
 import mongoose from "mongoose";
 
@@ -64,6 +65,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/movies", moviesRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/genres", genreRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

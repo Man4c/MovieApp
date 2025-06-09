@@ -279,6 +279,28 @@ class ApiService {
     throw _handleError(response);
   }
 
+  static Future<Map<String, dynamic>> createPaymentIntent(String userId, String planId) async {
+    // The backend route is POST /api/payments/create-payment-intent
+    // It expects { "planId": "your_plan_id" } in the body.
+    // userId is implicitly handled by the `protectRoute` middleware on the backend via the JWT token.
+    // So, we don't explicitly send userId in the body for this specific backend setup.
+
+    final response = await http.post(
+      Uri.parse('$baseUrl/payments/create-payment-intent'), // Corrected endpoint
+      headers: _headers, // Assumes _headers includes Authorization if needed
+      body: json.encode({'planId': planId}),
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      // Expects backend to return { "clientSecret": "pi_..." }
+      return data as Map<String, dynamic>;
+    } else {
+      // Use the existing _handleError method
+      throw _handleError(response);
+    }
+  }
+
   static Exception _handleError(http.Response response) {
     try {
       final error = json.decode(response.body)['message'];

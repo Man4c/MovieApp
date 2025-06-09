@@ -41,6 +41,8 @@ export const getMe = async (req, res) => {
         email: user.email,
         role: user.role,
         favorites: user.favorites || [], // Ensure favorites is always an array
+        stripeCustomerId: user.stripeCustomerId, // Added
+        subscription: user.subscription          // Added
       },
     });
   } catch (error) {
@@ -96,6 +98,8 @@ export const updateUsername = async (req, res) => {
         email: user.email,
         role: user.role,
         favorites: user.favorites || [],
+        stripeCustomerId: user.stripeCustomerId, // Added
+        subscription: user.subscription          // Added
       },
     });
   } catch (error) {
