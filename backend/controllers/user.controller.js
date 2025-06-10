@@ -54,6 +54,30 @@ export const getMe = async (req, res) => {
   }
 };
 
+export const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find({}).populate("subscription");
+    res.status(200).json({
+      success: true,
+      data: users.map((user) => ({
+        id: user._id,
+        name: user.username,
+        email: user.email,
+        role: user.role,
+        favorites: user.favorites || [],
+        stripeCustomerId: user.stripeCustomerId,
+        subscription: user.subscription,
+        watchHistory: user.watchHistory || [],
+      })),
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to get all users",
+      error: error.message,
+    });
+  }
+};
 export const updateUsername = async (req, res) => {
   try {
     const userId = req.user.id;

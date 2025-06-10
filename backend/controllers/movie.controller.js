@@ -79,6 +79,69 @@ export const getAllMovies = async (req, res) => {
   }
 };
 
+export const addMovie = async (req, res) => {
+  try {
+    const {
+      title,
+      description,
+      videoUrl,
+      posterPath,
+      backdropPath,
+      genre,
+      type,
+      rating,
+      releaseDate,
+      tmdbId,
+    } = req.body;
+
+    // Basic validation
+    if (!title || !description || !videoUrl || !posterPath || !genre || !type || !tmdbId) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields. Title, description, videoUrl, posterPath, genre, type, and tmdbId are required.",
+        error: "MISSING_FIELDS",
+      });
+    }
+
+    // Check if a movie with the same tmdbId already exists
+    const existingMovie = await Movie.findOne({ tmdbId });
+    if (existingMovie) {
+      return res.status(409).json({
+        success: false,
+        message: "A movie with this tmdbId already exists.",
+        error: "MOVIE_ALREADY_EXISTS",
+      });
+    }
+
+    const newMovie = new Movie({
+      title,
+      description,
+      videoUrl,
+      posterPath,
+      backdropPath: backdropPath || posterPath, // Default backdropPath to posterPath if not provided
+      genre,
+      type,
+      rating,
+      releaseDate,
+      tmdbId,
+    });
+
+    await newMovie.save();
+
+    res.status(201).json({
+      success: true,
+      message: "Movie added successfully",
+      data: mapMovieData(newMovie),
+    });
+  } catch (error) {
+    console.error("Error adding movie:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to add movie",
+      error: error.message,
+    });
+  }
+};
 export const getAllMovieByType = async (req, res) => {
   try {
     // This route might become redundant, but we'll keep it for now

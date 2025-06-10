@@ -769,22 +769,33 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
   }
 
   Widget _buildAddCommentInputSection() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final userRole = authProvider.user?.role;
+
     String hintText = 'Add a public comment...';
     String buttonText = 'Post Comment';
     String? replyingToUsername;
+    bool canReply = true; // Assume true by default
 
     if (_replyingToCommentId != null) {
+      if (userRole != 'admin') {
+        canReply = false;
+      }
       final parentComment = _allComments.firstWhere(
-        (c) => c?.id == _replyingToCommentId,
-        orElse: null,
+        (c) => c.id == _replyingToCommentId, // Removed ?. as _allComments is List<ReviewModel>
+        orElse: () => ReviewModel(id: '', videoId: '', userId: '', userName: 'Unknown', comment: '', rating: 0, timestamp: DateTime.now(), parentId: null), // Provide a default or handle null
       );
-      if (parentComment != null) {
+      // Ensure parentComment is not the default placeholder if `firstWhere` fails.
+      // This check might be redundant if orElse provides a non-null valid ReviewModel.
+      // However, if orElse returns null or a placeholder that shouldn't be processed, handle it.
+      if (parentComment.userName != 'Unknown') { // Check against placeholder
         replyingToUsername = parentComment.userName;
         hintText = 'Replying to $replyingToUsername...';
         buttonText = 'Post Reply';
       } else {
-        // Parent comment not found, might have been deleted or an issue with ID. Fallback.
+        // Parent comment not found or is placeholder, reset reply state
         _replyingToCommentId = null;
+        canReply = true; // Reset canReply as it's no longer a reply attempt
       }
     }
 
@@ -831,18 +842,19 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
             controller: _commentController,
             focusNode: _commentFocusNode,
             maxLines: 3,
-            enabled: !_isSubmittingComment,
+            enabled: !_isSubmittingComment && canReply, // Disable if not allowed to reply
             decoration: InputDecoration(
-              hintText: hintText,
+              hintText: canReply ? hintText : 'Only admins can reply to comments.',
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
               contentPadding: const EdgeInsets.all(10),
+              filled: !canReply, // Optionally fill if disabled
+              fillColor: !canReply ? Colors.grey.withOpacity(0.1) : null,
             ),
           ),
           const SizedBox(height: 10),
-          if (_replyingToCommentId ==
-              null) // Only show rating for top-level comments
+          if (_replyingToCommentId == null && canReply) // Only show rating for top-level comments
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(5, (index) {
@@ -851,43 +863,47 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
                     index < _userRating ? Icons.star : Icons.star_border,
                     color: index < _userRating ? Colors.amber : Colors.grey,
                   ),
-                  onPressed:
-                      _isSubmittingComment
-                          ? null
-                          : () {
-                            setState(() {
-                              _userRating = index + 1.0;
-                            });
-                          },
+                  onPressed: _isSubmittingComment
+                      ? null
+                      : () {
+                          setState(() {
+                            _userRating = index + 1.0;
+                          });
+                        },
                 );
               }),
             ),
           const SizedBox(height: 10),
-          ElevatedButton(
-            onPressed:
-                _isSubmittingComment || _commentController.text.isEmpty
-                    ? null
-                    : _submitComment,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              foregroundColor: Colors.white,
-              minimumSize: const Size(double.infinity, 45),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+          if (canReply) // Only show button if allowed to reply/comment
+            ElevatedButton(
+              onPressed: _isSubmittingComment || _commentController.text.isEmpty
+                  ? null
+                  : _submitComment,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(double.infinity, 45),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
-            ),
-            child:
-                _isSubmittingComment
-                    ? const SizedBox(
+              child: _isSubmittingComment
+                  ? const SizedBox(
                       height: 20,
                       width: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                     )
-                    : Text(buttonText),
-          ),
+                  : Text(buttonText),
+            )
+          else if (_replyingToCommentId != null && !canReply) // Show message if trying to reply but not admin
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Text(
+                'Only administrators can reply to comments.',
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
+                textAlign: TextAlign.center,
+              ),
+            ),
         ],
       ),
     );

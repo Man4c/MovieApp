@@ -1,6 +1,7 @@
 import express from "express";
-import { protectRoute } from "../middleware/auth.middleware.js";
+import { protectRoute, adminProtectRoute } from "../middleware/auth.middleware.js";
 import {
+  getAllUsers, // Added import for getAllUsers
   getMe,
   getUserFavorites,
   toggleFavorite,
@@ -11,6 +12,9 @@ import {
 } from "../controllers/user.controller.js";
 
 const router = express.Router();
+
+// Admin route to get all users
+router.get("/admin/users", protectRoute, adminProtectRoute, getAllUsers);
 
 router.get("/me", protectRoute, getMe);
 router.put("/me/username", protectRoute, updateUsername);

@@ -3,8 +3,12 @@ import 'package:provider/provider.dart';
 import 'package:flutter_video_app/providers/auth_provider.dart';
 import 'package:flutter_video_app/providers/watch_history_provider.dart';
 import 'package:flutter_video_app/providers/favorites_provider.dart';
+import 'package:flutter_video_app/screens/admin_add_movie_screen.dart'; // Import AdminAddMovieScreen
+import 'package:flutter_video_app/screens/admin_user_list_screen.dart'; // Import AdminUserListScreen
 import 'package:flutter_video_app/screens/favorites_screen.dart';
+import 'package:flutter_video_app/screens/subscription_screen.dart'; // Import SubscriptionScreen
 import 'package:flutter_video_app/screens/watch_history_screen.dart';
+import 'package:intl/intl.dart'; // For date formatting
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -14,10 +18,7 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  final bool _isSubscribed = true; // This might be part of user model later
-  final DateTime _subscriptionEndDate = DateTime.now().add(
-    const Duration(days: 30), // This might be part of user model later
-  );
+  // Removed _isSubscribed and _subscriptionEndDate as they will come from authProvider
 
   final _usernameFormKey = GlobalKey<FormState>();
   final _passwordFormKey = GlobalKey<FormState>();
@@ -139,76 +140,94 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                         const SizedBox(height: 24),
                         // Subscription Status Card
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF2C2F33),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color:
-                                      _isSubscribed
-                                          ? const Color(
-                                            0xFFE53935,
-                                          ).withOpacity(0.1)
-                                          : Colors.grey.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Icon(
-                                  _isSubscribed
-                                      ? Icons.star
-                                      : Icons.star_border,
-                                  color:
-                                      _isSubscribed
-                                          ? const Color(0xFFE53935)
-                                          : Colors.grey,
-                                ),
+                        Builder( // Use Builder to get context for authProvider
+                          builder: (context) {
+                            final user = authProvider.user;
+                            final subscription = user?.subscription;
+                            final bool isActiveSubscriber = subscription?.status == 'active';
+                            String planText = 'Plan: ${subscription?.planId ?? 'N/A'}';
+                            String endDateText = 'N/A';
+                            if (subscription?.currentPeriodEnd != null) {
+                              endDateText = DateFormat('dd MMM yyyy').format(subscription!.currentPeriodEnd!);
+                            }
+
+                            return Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF2C2F33),
+                                borderRadius: BorderRadius.circular(12),
                               ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      _isSubscribed
-                                          ? 'Paket Premium Aktif'
-                                          : 'Belum Berlangganan',
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: isActiveSubscriber
+                                          ? const Color(0xFFE53935).withOpacity(0.1)
+                                          : Colors.grey.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Icon(
+                                      isActiveSubscriber ? Icons.star : Icons.star_border,
+                                      color: isActiveSubscriber ? const Color(0xFFE53935) : Colors.grey,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          isActiveSubscriber ? 'Premium Subscription Active' : 'No Active Subscription',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                        if (isActiveSubscriber) ...[
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            '$planText - Renews on: $endDateText',
+                                            style: TextStyle(
+                                              color: Colors.white.withOpacity(0.7),
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        ] else ... [
+                                          const SizedBox(height: 4),
+                                           Text(
+                                            'Upgrade to unlock premium features.',
+                                            style: TextStyle(
+                                              color: Colors.white.withOpacity(0.7),
+                                              fontSize: 14,
+                                            ),
+                                          ),
+                                        ]
+                                      ],
+                                    ),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(builder: (context) => const SubscriptionScreen()),
+                                      );
+                                    },
+                                    child: Text(
+                                      isActiveSubscriber ? 'Manage' : 'Subscribe',
                                       style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 16,
+                                        color: Color(0xFFE53935),
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
-                                    if (_isSubscribed) ...[
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        'Berakhir pada ${_subscriptionEndDate.day}/${_subscriptionEndDate.month}/${_subscriptionEndDate.year}',
-                                        style: TextStyle(
-                                          color: Colors.white.withOpacity(0.7),
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                              TextButton(
-                                onPressed: () {
-                                  // TODO: Navigate to subscription management
-                                },
-                                child: Text(
-                                  _isSubscribed ? 'Kelola' : 'Berlangganan',
-                                  style: const TextStyle(
-                                    color: Color(0xFFE53935),
-                                    fontWeight: FontWeight.w600,
                                   ),
-                                ),
+                                ],
                               ),
-                            ],
+                            );
+                          }
+                        ),
+                      ],
                           ),
                         ),
                       ],
@@ -278,6 +297,51 @@ class _ProfilePageState extends State<ProfilePage> {
                             // TODO: Navigate to help
                           },
                         ),
+                        _buildMenuItem( // Refresh User Data Button
+                          icon: Icons.refresh,
+                          title: 'Refresh Account Data',
+                          subtitle: 'Update your profile and subscription status',
+                          onTap: () async {
+                            try {
+                              await authProvider.refreshUserData();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('User data refreshed successfully!')),
+                              );
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Failed to refresh user data: $e')),
+                              );
+                            }
+                          },
+                        ),
+                        if (authProvider.user?.role == 'admin')
+                          _buildMenuItem(
+                            icon: Icons.manage_accounts,
+                            title: 'User Management',
+                            subtitle: 'View and manage all users',
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const AdminUserListScreen(),
+                                ),
+                              );
+                            },
+                          ),
+                        if (authProvider.user?.role == 'admin')
+                          _buildMenuItem(
+                            icon: Icons.movie_creation_outlined, // Or Icons.add_to_photos, Icons.video_call
+                            title: 'Add New Movie',
+                            subtitle: 'Add a new movie to the catalog',
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const AdminAddMovieScreen(),
+                                ),
+                              );
+                            },
+                          ),
                         const SizedBox(height: 24),
                         // Logout Button
                         SizedBox(

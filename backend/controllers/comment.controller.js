@@ -8,6 +8,16 @@ export const addMovieComment = async (req, res) => {
     const { comment, rating, parentId } = req.body;
     const { tmdbId: movieId } = req.params; // tmdbId is the movieId
     const userId = req.user.id;
+    const userRole = req.user.role;
+
+    // Check if it's a reply and if the user is not an admin
+    if (parentId && userRole !== "admin") {
+      return res.status(403).json({
+        success: false,
+        message: "Only admins can reply to comments.",
+        error: "FORBIDDEN_REPLY",
+      });
+    }
 
     // Validate movie exists
     const movie = await Movie.findOne({ tmdbId: movieId });

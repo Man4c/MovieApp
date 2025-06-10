@@ -34,6 +34,21 @@ class ApiService {
     throw _handleError(response);
   }
 
+  static Future<VideoModel> addMovieByAdmin(VideoModel movie) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/movies/admin/movies'),
+      headers: _headers,
+      body: json.encode(movie.toJson()),
+    );
+
+    if (response.statusCode == 201) { // Typically 201 for created resource
+      final data = json.decode(response.body);
+      // Assuming the backend returns { success: true, data: createdMovie }
+      return VideoModel.fromJson(data['data'] as Map<String, dynamic>);
+    }
+    throw _handleError(response);
+  }
+
   static Future<List<String>> getMovieTypes() async {
     final response = await http.get(
       Uri.parse('$baseUrl/genres'),
@@ -299,6 +314,22 @@ class ApiService {
       // Use the existing _handleError method
       throw _handleError(response);
     }
+  }
+
+  static Future<List<UserModel>> getAllUsers() async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/users/admin/users'),
+      headers: _headers,
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      // Assuming the backend returns { success: true, data: [user1, user2, ...] }
+      return (data['data'] as List)
+          .map((json) => UserModel.fromJson(json as Map<String, dynamic>))
+          .toList();
+    }
+    throw _handleError(response);
   }
 
   static Exception _handleError(http.Response response) {
