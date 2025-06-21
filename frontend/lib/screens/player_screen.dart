@@ -81,7 +81,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
       await favoritesProvider.toggleFavorite(widget.video);
 
       if (mounted) {
-        final isFavorite = favoritesProvider.isFavorite(widget.video.id);
+        final isFavorite = favoritesProvider.isFavorite(widget.video.tmdbId);
         final message =
             isFavorite ? 'Ditambahkan ke favorit' : 'Dihapus dari favorit';
         ScaffoldMessenger.of(
@@ -126,7 +126,7 @@ class _PlayerScreenState extends State<PlayerScreen> {
       },
       child: Consumer<FavoritesProvider>(
         builder: (context, favoritesProvider, child) {
-          final bool isFavorite = favoritesProvider.isFavorite(widget.video.id);
+          final bool isFavorite = favoritesProvider.isFavorite(widget.video.tmdbId);
 
           return Scaffold(
             backgroundColor: Colors.black,

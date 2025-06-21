@@ -29,12 +29,12 @@ class WatchHistoryProvider with ChangeNotifier {
 
   Future<void> addToWatchHistory(VideoModel video) async {
     try {
-      await ApiService.addToWatchHistory(video.id);
-      if (!_watchHistory.any((v) => v.id == video.id)) {
+      await ApiService.addToWatchHistory(video.tmdbId);
+      if (!_watchHistory.any((v) => v.tmdbId == video.tmdbId)) {
         _watchHistory.insert(0, video); // Add to beginning of list
       } else {
         // Move to beginning if already exists
-        _watchHistory.removeWhere((v) => v.id == video.id);
+        _watchHistory.removeWhere((v) => v.tmdbId == video.tmdbId);
         _watchHistory.insert(0, video);
       }
       notifyListeners();

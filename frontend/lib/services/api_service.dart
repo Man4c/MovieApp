@@ -1,22 +1,25 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_video_app/models/video_model.dart';
-import 'package:flutter_video_app/models/comment_model.dart';
+import 'package:flutter_video_app/models/comment_model.dart' show ReviewModel;
 import 'package:flutter_video_app/models/user_model.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://192.168.231.1:4002/api';
+  static const String baseUrl = 'http://192.168.116.1:4002/api';
   static String? _token;
 
   static void setToken(String token) {
+    print('Setting token: $token'); // Debug log
     _token = token;
   }
 
   static Map<String, String> get _headers {
-    return {
+    final headers = {
       'Content-Type': 'application/json',
       if (_token != null) 'Authorization': 'Bearer $_token',
     };
+    print('Request headers: $headers'); // Debug log
+    return headers;
   }
 
   static Future<UserModel> login(String email, String password) async {
@@ -28,8 +31,13 @@ class ApiService {
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
+      print("Login Response Data: ${json.encode(data)}"); // Debug log
       _token = data['token'] as String?;
-      return UserModel.fromJson(data['user'] as Map<String, dynamic>);
+      final user = UserModel.fromJson(data['user'] as Map<String, dynamic>);
+      print(
+        "Parsed User Data: name=${user.name}, email=${user.email}, role=${user.role}",
+      ); // Debug log
+      return user;
     }
     throw _handleError(response);
   }
@@ -41,7 +49,8 @@ class ApiService {
       body: json.encode(movie.toJson()),
     );
 
-    if (response.statusCode == 201) { // Typically 201 for created resource
+    if (response.statusCode == 201) {
+      // Typically 201 for created resource
       final data = json.decode(response.body);
       // Assuming the backend returns { success: true, data: createdMovie }
       return VideoModel.fromJson(data['data'] as Map<String, dynamic>);
@@ -49,16 +58,37 @@ class ApiService {
     throw _handleError(response);
   }
 
+  static dynamic _handleError(http.Response response) {
+    print('Error Response Status: ${response.statusCode}'); // Debug log
+    print('Error Response Body: ${response.body}'); // Debug log
+
+    try {
+      final errorData = json.decode(response.body);
+      throw errorData['message'] ?? 'Unknown error occurred';
+    } catch (e) {
+      if (e is FormatException) {
+        throw 'Invalid response format from server';
+      }
+      rethrow;
+    }
+  }
+
   static Future<List<String>> getMovieTypes() async {
+    print('Getting movie types...'); // Debug log
     final response = await http.get(
       Uri.parse('$baseUrl/genres'),
-      headers: {'Content-Type': 'application/json'},
+      headers: _headers,
     );
+
+    print('Movie types response status: ${response.statusCode}'); // Debug log
+    print('Movie types response body: ${response.body}'); // Debug log
 
     if (response.statusCode == 200) {
       final responseData = json.decode(response.body);
       final typesList = responseData['genres'] as List?;
-      return List<String>.from(typesList ?? []);
+      final genres = List<String>.from(typesList ?? []);
+      print('Found ${genres.length} genres: $genres'); // Debug log
+      return genres.where((genre) => genre.isNotEmpty).toList();
     }
     throw _handleError(response);
   }
@@ -93,26 +123,38 @@ class ApiService {
     String? category,
     String? search,
     int? page,
-    bool loadAll = false,
-    String? filterType, // Added filterType parameter
+    String? filterType,
   }) async {
     final queryParams = {
-      if (category != null) 'category': category,
-      if (search != null) 'search': search,
+      if (category != null && category.isNotEmpty) 'category': category.trim(),
+      if (search != null && search.isNotEmpty) 'search': search.trim(),
+      if (filterType != null && filterType.isNotEmpty)
+        'filterType': filterType.trim(),
       if (page != null) 'page': page.toString(),
-      'loadAll': loadAll.toString(),
-      if (filterType != null) 'filterType': filterType,
     };
 
-    final response = await http.get(
-      Uri.parse('$baseUrl/movies').replace(queryParameters: queryParams),
-      headers: _headers,
-    );
+    print('Getting videos with params: $queryParams'); // Debug log
+    print('Using headers: ${_headers}'); // Debug log
+
+    final url = Uri.parse(
+      '$baseUrl/movies',
+    ).replace(queryParameters: queryParams);
+    print('Request URL: $url'); // Debug log
+
+    final response = await http.get(url, headers: _headers);
+
+    print('Videos response status: ${response.statusCode}'); // Debug log
+    print('Videos response body: ${response.body}'); // Debug log
 
     if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-
-      return (data['movies'] as List)
+      final responseData = json.decode(response.body);
+      if (responseData['data'] == null) {
+        print('No videos found in response'); // Debug log
+        return [];
+      }
+      final List<dynamic> videosData = responseData['data'] as List;
+      print('Found ${videosData.length} videos'); // Debug log
+      return videosData
           .map((json) => VideoModel.fromJson(json as Map<String, dynamic>))
           .toList();
     }
@@ -120,15 +162,19 @@ class ApiService {
   }
 
   static Future<List<VideoModel>> getFavorites() async {
+    print('Getting favorites - Token: $_token'); // Debug log
     final response = await http.get(
       Uri.parse('$baseUrl/users/favorites'),
       headers: _headers,
     );
 
+    print('Favorites response status: ${response.statusCode}'); // Debug log
+    print('Favorites response body: ${response.body}'); // Debug log
+
     if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      // Backend getUserFavorites returns { success: true, data: mappedFavorites }
-      return (data['data'] as List)
+      final responseData = json.decode(response.body);
+      final List<dynamic> videosData = responseData['data'] as List;
+      return videosData
           .map((json) => VideoModel.fromJson(json as Map<String, dynamic>))
           .toList();
     }
@@ -155,7 +201,6 @@ class ApiService {
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-
       return (data['data'] as List)
           .map((json) => ReviewModel.fromJson(json as Map<String, dynamic>))
           .toList();
@@ -166,9 +211,9 @@ class ApiService {
   static Future<ReviewModel> addComment(
     String videoId,
     String comment,
-    double rating, // Keep rating for now
-    {String? parentId} // Add optional parentId
-  ) async {
+    double rating, {
+    String? parentId,
+  }) async {
     final response = await http.post(
       Uri.parse('$baseUrl/movies/$videoId/comments'),
       headers: _headers,
@@ -181,22 +226,29 @@ class ApiService {
 
     if (response.statusCode == 201) {
       final data = json.decode(response.body);
-
       return ReviewModel.fromJson(data['data'] as Map<String, dynamic>);
     }
     throw _handleError(response);
   }
 
   static Future<UserModel> getCurrentUser() async {
+    print('Getting current user info...'); // Debug log
     final response = await http.get(
       Uri.parse('$baseUrl/users/me'),
       headers: _headers,
     );
 
+    print(
+      'Get current user response status: ${response.statusCode}',
+    ); // Debug log
+    print('Get current user response body: ${response.body}'); // Debug log
+
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-      // Backend getMe returns { success: true, data: { id: ..., name: ..., ... } }
-      return UserModel.fromJson(data['data'] as Map<String, dynamic>);
+      if (data['success'] == true && data['data'] != null) {
+        return UserModel.fromJson(data['data']);
+      }
+      throw 'Invalid response format';
     }
     throw _handleError(response);
   }
@@ -268,7 +320,6 @@ class ApiService {
     );
 
     if (response.statusCode == 200) {
-      // Password change successful, no specific data usually returned other than a message
       return;
     }
     throw _handleError(response);
@@ -278,66 +329,109 @@ class ApiService {
     String idToken,
   ) async {
     final response = await http.post(
-      Uri.parse(
-        '$baseUrl/auth/google/token',
-      ), // This new endpoint needs to be created on the backend
+      Uri.parse('$baseUrl/auth/google/token'),
       headers: _headers,
       body: json.encode({'idToken': idToken}),
     );
 
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
-      // Expects backend to return { token: '...', user: { ... } }
       _token = data['token'] as String?;
-      return data; // Return the whole map {token, user}
+      return data;
     }
     throw _handleError(response);
   }
 
-  static Future<Map<String, dynamic>> createPaymentIntent(String userId, String planId) async {
-    // The backend route is POST /api/payments/create-payment-intent
-    // It expects { "planId": "your_plan_id" } in the body.
-    // userId is implicitly handled by the `protectRoute` middleware on the backend via the JWT token.
-    // So, we don't explicitly send userId in the body for this specific backend setup.
-
+  static Future<Map<String, dynamic>> createPaymentIntent(
+    String userId,
+    String priceId,
+  ) async {
+    print('Creating payment intent for priceId: $priceId'); // Debug log
     final response = await http.post(
-      Uri.parse('$baseUrl/payments/create-payment-intent'), // Corrected endpoint
-      headers: _headers, // Assumes _headers includes Authorization if needed
-      body: json.encode({'planId': planId}),
+      Uri.parse('$baseUrl/payments/create-subscription'),
+      headers: _headers,
+      body: json.encode({'userId': userId, 'priceId': priceId}),
     );
 
+    print(
+      'Payment intent response status: ${response.statusCode}',
+    ); // Debug log
+    print('Payment intent response body: ${response.body}'); // Debug log
+
     if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      // Expects backend to return { "clientSecret": "pi_..." }
-      return data as Map<String, dynamic>;
-    } else {
-      // Use the existing _handleError method
+      return json.decode(response.body) as Map<String, dynamic>;
+    }
+    throw _handleError(response);
+  }
+
+  static Future<void> confirmSubscription(String subscriptionId) async {
+    print('Confirming subscription: $subscriptionId'); // Debug log
+    final response = await http.post(
+      Uri.parse('$baseUrl/payments/confirm-subscription'),
+      headers: _headers,
+      body: json.encode({'subscriptionId': subscriptionId}),
+    );
+
+    print(
+      'Confirm subscription response status: ${response.statusCode}',
+    ); // Debug log
+    print('Confirm subscription response body: ${response.body}'); // Debug log
+
+    if (response.statusCode != 200) {
       throw _handleError(response);
     }
   }
 
+  static Future<Map<String, dynamic>> getSubscriptionStatus() async {
+    print('Getting subscription status'); // Debug log
+    final response = await http.get(
+      Uri.parse('$baseUrl/payments/subscription-status'),
+      headers: _headers,
+    );
+
+    print(
+      'Subscription status response status: ${response.statusCode}',
+    ); // Debug log
+    print('Subscription status response body: ${response.body}'); // Debug log
+
+    if (response.statusCode == 200) {
+      return json.decode(response.body) as Map<String, dynamic>;
+    }
+    throw _handleError(response);
+  }
+
   static Future<List<UserModel>> getAllUsers() async {
     final response = await http.get(
-      Uri.parse('$baseUrl/users/admin/users'),
+      Uri.parse('$baseUrl/users/admin/users/'),
       headers: _headers,
     );
 
     if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      // Assuming the backend returns { success: true, data: [user1, user2, ...] }
-      return (data['data'] as List)
-          .map((json) => UserModel.fromJson(json as Map<String, dynamic>))
+      final responseData = json.decode(response.body);
+      final List<dynamic> usersData = responseData['data'] as List;
+      return usersData
+          .map(
+            (userData) => UserModel.fromJson(userData as Map<String, dynamic>),
+          )
           .toList();
     }
     throw _handleError(response);
   }
 
-  static Exception _handleError(http.Response response) {
-    try {
-      final error = json.decode(response.body)['message'];
-      return Exception(error ?? 'An error occurred');
-    } catch (e) {
-      return Exception('An error occurred');
+  static Future<UserModel?> getMe() async {
+    print('Getting current user info'); // Debug log
+    final response = await http.get(
+      Uri.parse('$baseUrl/users/me'),
+      headers: _headers,
+    );
+
+    print('Get me response status: ${response.statusCode}'); // Debug log
+    print('Get me response body: ${response.body}'); // Debug log
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      return UserModel.fromJson(data['data'] as Map<String, dynamic>);
     }
+    return null;
   }
 }

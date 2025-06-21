@@ -1,14 +1,14 @@
 class VideoModel {
-  final String tmdbId; // Renamed from id
+  final String tmdbId;
   final String title;
   final String description;
-  final String posterPath; // Renamed from thumbnailUrl
+  final String posterPath;
   final String backdropPath;
   final String videoUrl;
-  final List<String> genre; // Renamed from categories
+  final List<String> genre;
   final List<String> type;
   final double rating;
-  final List<String>? tags; // Made tags optional as backend might not handle it
+  final List<String>? tags;
   final String releaseDate;
 
   VideoModel({
@@ -26,29 +26,77 @@ class VideoModel {
   });
 
   factory VideoModel.fromJson(Map<String, dynamic> json) {
-    // Assumes the backend returns 'id' as tmdbId in GET requests, but 'tmdbId' when creating/returning specific movie.
-    // The 'mapMovieData' in backend returns 'id' as tmdbId.
-    // For consistency, let's assume the response from addMovie also maps tmdbId to 'id'.
-    // If addMovie returns 'tmdbId', then this should be json['tmdbId']
+    print('Parsing video JSON: ${json.toString()}');
     String idValue = json['id'] as String? ?? json['tmdbId'] as String? ?? '';
+    print('ID Value: $idValue');
+    String title = json['title'] as String? ?? '';
+    String description = json['description'] as String? ?? '';
+    String posterPath =
+        json['thumbnailUrl'] as String? ?? json['posterPath'] as String? ?? '';
+    String backdropPath = json['backdropPath'] as String? ?? posterPath;
+    String videoUrl = json['videoUrl'] as String? ?? '';
+    // Handle genre/categories with proper casing
+    List<String> genres = [];
+    var rawGenres = json['categories'] ?? json['genre'] ?? [];
+    if (rawGenres is List) {
+      genres =
+          rawGenres
+              .map((g) => g.toString().trim())
+              .where((g) => g.isNotEmpty)
+              .toList();
+    }
+    // Handle type with proper casing
+    List<String> types = [];
+    var rawTypes = json['type'] ?? [];
+    if (rawTypes is List) {
+      types =
+          rawTypes
+              .map((t) => t.toString().trim())
+              .where((t) => t.isNotEmpty)
+              .toList();
+    } else if (rawTypes is String) {
+      types = [rawTypes];
+    }
+    // Handle rating safely
+    double rating = 0.0;
+    var rawRating = json['rating'];
+    if (rawRating != null) {
+      if (rawRating is num) {
+        rating = rawRating.toDouble();
+      } else if (rawRating is String) {
+        rating = double.tryParse(rawRating) ?? 0.0;
+      }
+    }
+    // Handle tags safely
+    List<String>? tags;
+    var rawTags = json['tags'];
+    if (rawTags != null && rawTags is List) {
+      tags =
+          rawTags
+              .map((t) => t.toString().trim())
+              .where((t) => t.isNotEmpty)
+              .toList();
+    }
+    String releaseDate = json['releaseDate'] as String? ?? '';
 
-    return VideoModel(
+    final videoModel = VideoModel(
       tmdbId: idValue,
-      title: json['title'] as String,
-      description: json['description'] as String,
-      // Backend's mapMovieData uses 'thumbnailUrl' for posterPath and 'backdropPath'
-      posterPath: json['thumbnailUrl'] as String? ?? json['posterPath'] as String? ?? '',
-      backdropPath: json['backdropPath'] as String? ?? json['posterPath'] as String? ?? '', // Fallback
-      videoUrl: json['videoUrl'] as String,
-      genre: List<String>.from(json['categories'] as List? ?? json['genre'] as List? ?? []), // Accommodate 'categories' or 'genre'
-      type: List<String>.from(json['type'] as List? ?? []),
-      rating: (json['rating'] as num).toDouble(),
-      tags: json['tags'] != null ? List<String>.from(json['tags'] as List) : null,
-      releaseDate: json['releaseDate'] as String,
+      title: title,
+      description: description,
+      posterPath: posterPath,
+      backdropPath: backdropPath,
+      videoUrl: videoUrl,
+      genre: genres,
+      type: types,
+      rating: rating,
+      tags: tags,
+      releaseDate: releaseDate,
     );
+
+    print('Successfully parsed VideoModel: ${videoModel.title}');
+    return videoModel;
   }
 
-  // toJson for sending data to the backend's addMovie endpoint
   Map<String, dynamic> toJson() {
     return {
       'tmdbId': tmdbId,
@@ -60,7 +108,7 @@ class VideoModel {
       'genre': genre,
       'type': type,
       'rating': rating,
-      if (tags != null) 'tags': tags, // Include tags only if not null
+      if (tags != null) 'tags': tags,
       'releaseDate': releaseDate,
     };
   }

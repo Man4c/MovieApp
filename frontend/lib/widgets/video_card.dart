@@ -30,7 +30,7 @@ class _VideoCardState extends State<VideoCard> {
   Widget build(BuildContext context) {
     return Consumer<FavoritesProvider>(
       builder: (context, favoritesProvider, child) {
-        bool isFavorite = favoritesProvider.isFavorite(widget.video.id);
+        bool isFavorite = favoritesProvider.isFavorite(widget.video.tmdbId);
         return Padding(
           padding: const EdgeInsets.only(right: 8.0),
           child: GestureDetector(
@@ -55,7 +55,7 @@ class _VideoCardState extends State<VideoCard> {
                       AspectRatio(
                         aspectRatio: 2 / 3,
                         child: CachedNetworkImage(
-                          imageUrl: widget.video.thumbnailUrl,
+                          imageUrl: widget.video.posterPath,
                           fit: BoxFit.cover,
                           placeholder:
                               (context, url) => Container(

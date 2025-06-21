@@ -61,7 +61,6 @@ const userSchema = new mongoose.Schema(
     stripeCustomerId: {
       type: String,
     },
-
     subscription: {
       subscriptionId: {
         type: String,
@@ -71,10 +70,39 @@ const userSchema = new mongoose.Schema(
       },
       status: {
         type: String,
-        enum: ["active", "canceled", "past_due", "inactive"],
+        enum: [
+          "active",
+          "canceled",
+          "past_due",
+          "inactive",
+          "incomplete",
+          "incomplete_expired",
+          "trialing",
+          "unpaid",
+          "paused",
+        ],
+        default: "inactive",
       },
       currentPeriodEnd: {
         type: Date,
+        set: function (date) {
+          if (!date) {
+            return new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // Default to 30 days from now
+          }
+          if (typeof date === "number") {
+            return new Date(date * 1000);
+          }
+          if (date instanceof Date) {
+            return date;
+          }
+          // Try to parse string date
+          const parsedDate = new Date(date);
+          if (!isNaN(parsedDate.getTime())) {
+            return parsedDate;
+          }
+          // If all else fails, default to 30 days from now
+          return new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+        },
       },
     },
 

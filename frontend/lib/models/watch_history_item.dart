@@ -15,8 +15,8 @@ class WatchHistoryItem {
 
   factory WatchHistoryItem.fromVideo(VideoModel video) {
     return WatchHistoryItem(
-      id: video.id,
-      thumbnailUrl: video.thumbnailUrl,
+      id: video.tmdbId,
+      thumbnailUrl: video.posterPath,
       episodeInfo: video.type.isNotEmpty ? video.type.first : 'Movie',
       title: video.title,
     );

@@ -1,15 +1,14 @@
 import Movie from "../models/movie.model.js";
 
-// Helper function for field mapping
 const mapMovieData = (movie) => ({
   id: movie.tmdbId,
   title: movie.title,
   description: movie.description,
   thumbnailUrl: movie.posterPath,
-  backdropPath: movie.backdropPath || movie.posterPath, // Fallback to poster if no backdrop
+  backdropPath: movie.backdropPath || movie.posterPath, 
   videoUrl: movie.videoUrl,
   categories: movie.genre,
-  type: Array.isArray(movie.type) ? movie.type : [movie.type].filter(Boolean), // Ensure type is always an array
+  type: Array.isArray(movie.type) ? movie.type : [movie.type].filter(Boolean),
   rating: movie.rating,
   releaseDate: movie.releaseDate,
   tags: movie.tags || [],
@@ -19,10 +18,16 @@ export const getAllMovies = async (req, res) => {
   try {
     const searchQuery = req.query.search;
     const categoryQuery = req.query.category;
-    const filterType = req.query.filterType; // New
+    const filterType = req.query.filterType;
     const loadAll = req.query.loadAll === "true";
 
     let query = {};
+    console.log("Received query params:", {
+      searchQuery,
+      categoryQuery,
+      filterType,
+      loadAll,
+    });
 
     if (searchQuery) {
       query.$or = [
@@ -30,47 +35,54 @@ export const getAllMovies = async (req, res) => {
         { description: { $regex: searchQuery, $options: "i" } },
       ];
     }
-
-    // This replaces the previous 'if (categoryQuery)' block
     if (categoryQuery) {
-      if (filterType === 'genre') {
-        query.genre = { $elemMatch: { $regex: new RegExp(`^${categoryQuery}$`, "i") } };
-      } else { // Defaults to 'type' filtering if filterType is 'type', undefined, or any other value
-        query.type = { $elemMatch: { $regex: new RegExp(`^${categoryQuery}$`, "i") } };
-      }
+      const normalizedCategory = categoryQuery.trim();
+      query.genre = {
+        $elemMatch: {
+          $regex: new RegExp(`^${normalizedCategory}$`, "i"),
+        },
+      };
+    }
+
+    if (filterType) {
+      const normalizedType = filterType.trim();
+      query.type = {
+        $elemMatch: {
+          $regex: new RegExp(`^${normalizedType}$`, "i"),
+        },
+      };
     }
 
     let moviesQuery = Movie.find(query);
 
     const page = parseInt(req.query.page) || 1;
-    const pageSize = 10; // Default page size
+    const pageSize = 20; // Increased page size
 
-    // Only apply pagination if not loading all AND no category filter is active
     if (!loadAll && !categoryQuery) {
       moviesQuery = moviesQuery.skip((page - 1) * pageSize).limit(pageSize);
     }
-    // If categoryQuery is present, pagination is skipped by default.
-    // If loadAll is true, pagination is also skipped.
 
-    const moviesFromDB = await moviesQuery;
-    const mappedMovies = moviesFromDB.map(mapMovieData);
+    moviesQuery = moviesQuery.sort({ releaseDate: -1 });
 
-    let responseJson = {
-      success: true,
-      movies: mappedMovies,
-    };
+    const queryResults = await moviesQuery;
 
-    if (!loadAll && !categoryQuery) {
-      const totalMoviesCount = await Movie.countDocuments(query);
-      responseJson.currentPage = page;
-      responseJson.totalPages = Math.ceil(totalMoviesCount / pageSize);
-      responseJson.totalMovies = totalMoviesCount;
-    } else {
-      responseJson.totalMovies = moviesFromDB.length;
+    if (!queryResults || queryResults.length === 0) {
+      console.log(`No movies found for query:`, query);
+      return res.status(200).json({
+        success: true,
+        data: [],
+      });
     }
 
-    res.status(200).json(responseJson);
+    const mappedResults = queryResults.map(mapMovieData);
+    console.log(`Found ${mappedResults.length} movies for query:`, query);
+
+    res.status(200).json({
+      success: true,
+      data: mappedResults,
+    });
   } catch (error) {
+    console.error("Error fetching movies:", error);
     res.status(500).json({
       success: false,
       message: "Failed to fetch movies",
@@ -94,16 +106,23 @@ export const addMovie = async (req, res) => {
       tmdbId,
     } = req.body;
 
-    // Basic validation
-    if (!title || !description || !videoUrl || !posterPath || !genre || !type || !tmdbId) {
+    if (
+      !title ||
+      !description ||
+      !videoUrl ||
+      !posterPath ||
+      !genre ||
+      !type ||
+      !tmdbId
+    ) {
       return res.status(400).json({
         success: false,
-        message: "Missing required fields. Title, description, videoUrl, posterPath, genre, type, and tmdbId are required.",
+        message:
+          "Missing required fields. Title, description, videoUrl, posterPath, genre, type, and tmdbId are required.",
         error: "MISSING_FIELDS",
       });
     }
 
-    // Check if a movie with the same tmdbId already exists
     const existingMovie = await Movie.findOne({ tmdbId });
     if (existingMovie) {
       return res.status(409).json({
@@ -118,7 +137,7 @@ export const addMovie = async (req, res) => {
       description,
       videoUrl,
       posterPath,
-      backdropPath: backdropPath || posterPath, // Default backdropPath to posterPath if not provided
+      backdropPath: backdropPath || posterPath, 
       genre,
       type,
       rating,
@@ -144,14 +163,12 @@ export const addMovie = async (req, res) => {
 };
 export const getAllMovieByType = async (req, res) => {
   try {
-    // This route might become redundant, but we'll keep it for now
-    // Consider updating its logic similarly if it's to be kept and used
     const movies = await Movie.find({ type: req.params.type });
-    const mappedMovies = movies.map(mapMovieData); // Apply mapping here too
+    const mappedMovies = movies.map(mapMovieData); 
     res.status(200).json({
       success: true,
-      count: mappedMovies.length, // Based on mapped movies
-      data: mappedMovies, // Send mapped movies
+      count: mappedMovies.length, 
+      data: mappedMovies,
     });
   } catch (error) {
     res.status(500).json({
@@ -173,7 +190,7 @@ export const getMovieById = async (req, res) => {
     }
     res.status(200).json({
       success: true,
-      data: mapMovieData(foundMovie), // Apply mapping here
+      data: mapMovieData(foundMovie), 
     });
   } catch (error) {
     res.status(500).json({

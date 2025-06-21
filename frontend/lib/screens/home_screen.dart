@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_video_app/models/video_model.dart';
-import 'package:flutter_video_app/screens/subscription_screen.dart';
 import 'package:flutter_video_app/services/api_service.dart';
 import 'package:flutter_video_app/providers/auth_provider.dart';
 import 'package:provider/provider.dart';
@@ -47,6 +46,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _initializeHomeScreen() {
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    if (!authProvider.isAuthenticated || authProvider.token == null) {
+      print('Not authenticated or no token available'); // Debug log
+      return;
+    }
+
     for (String category in _homeScreenCategories) {
       _isLoadingCategory[category] = false; // Initialize
       _fetchVideosForCategory(category);
@@ -59,11 +64,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _isLoadingCategory[category] = true;
     });
     try {
-      final videos = await ApiService.getVideos(
-        category: category,
-        loadAll: true,
-        filterType: 'type', // Added filterType
-      );
+      final videos = await ApiService.getVideos(filterType: category);
       if (!mounted) return;
       setState(() {
         _categorizedVideos[category] = videos;
@@ -75,6 +76,12 @@ class _HomeScreenState extends State<HomeScreen> {
         _isLoadingCategory[category] = false;
         _categorizedVideos[category] = [];
       });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error loading $category videos: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
       debugPrint("Error fetching videos for $category: $e");
     }
   }
@@ -85,10 +92,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _isLoadingSearch = true;
     });
     try {
-      final videos = await ApiService.getVideos(
-        search: searchTerm,
-        loadAll: true,
-      );
+      final videos = await ApiService.getVideos(search: searchTerm);
       if (!mounted) return;
       setState(() {
         _searchResults = videos;
@@ -100,6 +104,12 @@ class _HomeScreenState extends State<HomeScreen> {
         _isLoadingSearch = false;
         _searchResults = [];
       });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error searching videos: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
       debugPrint("Error fetching search results for $searchTerm: $e");
     }
   }
@@ -133,7 +143,9 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context, authProvider, _) {
         if (!authProvider.isAuthenticated) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            Navigator.of(context).pushReplacementNamed('/login');
+            Navigator.of(
+              context,
+            ).pushReplacement(MaterialPageRoute(builder: (_) => LoginScreen()));
           });
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
@@ -222,10 +234,14 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // MODIFIED: This entire widget has been rebuilt to include the profile avatar.
   Widget _buildHomeHeader() {
-    final user = Provider.of<AuthProvider>(context).user;
-    String userName = user?.name ?? 'Guest';
-    String userInitial = userName.isNotEmpty ? userName[0].toUpperCase() : 'G';
+    final provider = Provider.of<AuthProvider>(context);
+    String userName = provider.user?.name ?? 'Guest';
+    String role = provider.user?.role ?? 'Guest';
+    String email = provider.user?.email ?? 'Guest';
+    print(role);
+    print(email);
     print(userName);
+    String userInitial = userName.isNotEmpty ? userName[0].toUpperCase() : 'G';
     return Container(
       color: Colors.transparent,
       padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 16.0),
@@ -265,13 +281,10 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(width: 14),
 
-              // CORRECTED: Profile Avatar wrapped in a Builder
               Builder(
                 builder: (context) {
-                  // This builder provides the correct context
                   return GestureDetector(
                     onTap: () {
-                      // This now correctly finds the Scaffold and opens the drawer
                       Scaffold.of(context).openDrawer();
                     },
                     child: CircleAvatar(

@@ -41,7 +41,7 @@ export const signup = async (req, res) => {
         role: createdUser.role, // Include role
         favorites: createdUser.favorites || [], // Include favorites
         stripeCustomerId: createdUser.stripeCustomerId,
-        subscription: createdUser.subscription
+        subscription: createdUser.subscription,
       },
       messages: "User created successfully", // Message typo corrected from "messages"
     });
@@ -67,11 +67,8 @@ export const login = async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
     const token = generateToken(user._id);
-    console.log(token);
 
-    // No need to re-fetch user here if not creating, but ensure all fields are selected
-    // If user.role or user.favorites might be excluded by .select('+password'), adjust if necessary
-    // For now, assume they are available on 'user' object after findOne without explicit select for those
+    
     res.status(200).json({
       token: token, // Token first
       user: {
@@ -81,7 +78,7 @@ export const login = async (req, res) => {
         role: user.role, // Include role
         favorites: user.favorites || [], // Include favorites
         stripeCustomerId: user.stripeCustomerId,
-        subscription: user.subscription
+        subscription: user.subscription,
       },
       message: "Logged in successfully",
     });
@@ -106,11 +103,12 @@ export const verifyGoogleToken = async (req, res) => {
     const payload = ticket.getPayload();
     const googleId = payload["sub"];
     const email = payload["email"];
-    const name = payload["name"]; // Or given_name, family_name
+    const displayName = payload["name"]; // Get full name from Google
 
     // Find or create user
     let user = await User.findOne({ googleId });
-
+    console.log("Google payload:", payload);
+    console.log("Display name from Google:", displayName);
     if (user) {
       // User found with googleId, log them in
       const token = generateToken(user._id);
@@ -118,13 +116,14 @@ export const verifyGoogleToken = async (req, res) => {
         token,
         user: {
           id: user._id,
-          name: user.username,
+          name: user.username, // Send username as name to frontend
           email: user.email,
           role: user.role,
           favorites: user.favorites || [],
+          watchHistory: user.watchHistory || [],
           googleId: user.googleId,
           stripeCustomerId: user.stripeCustomerId,
-          subscription: user.subscription
+          subscription: user.subscription,
         },
         message: "Google authentication successful",
       });
@@ -141,12 +140,12 @@ export const verifyGoogleToken = async (req, res) => {
     }
 
     // If email exists with a googleId, it should have been caught by the first User.findOne({googleId})
-    // So, if we are here, it's a new user or an existing Google user whose googleId wasn't found (should not happen if DB is consistent)
-
-    let username = name.replace(/\s+/g, "").toLowerCase();
+    // So, if we are here, it's a new user or an existing Google user whose googleId wasn't found (should not happen if DB is consistent)    let username = displayName;
+    // Keep the display name as is for better user experience
     const userWithSameUsername = await User.findOne({ username });
     if (userWithSameUsername) {
-      username = `${username}${Date.now().toString().slice(-4)}`;
+      // If username exists, append a unique identifier but keep the display name readable
+      username = `${displayName} ${Date.now().toString().slice(-4)}`;
     }
 
     user = new User({
@@ -169,7 +168,7 @@ export const verifyGoogleToken = async (req, res) => {
         favorites: user.favorites || [],
         googleId: user.googleId,
         stripeCustomerId: user.stripeCustomerId,
-        subscription: user.subscription
+        subscription: user.subscription,
       },
       message: "Google user registered and logged in successfully",
     });

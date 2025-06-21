@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_video_app/providers/favorites_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_video_app/models/video_model.dart';
@@ -35,8 +34,7 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
 
   // New state variables for comments
   List<ReviewModel> _allComments = []; // Changed from _comments
-  Map<String, bool> _expandedReplies =
-      {}; // Tracks expanded state for parent comment IDs
+  Map<String, bool> _expandedReplies = {}; // Tracks expanded state for parent comment IDs
   String? _replyingToCommentId; // ID of the comment being replied to
   // final TextEditingController _commentController = TextEditingController(); // Already exists
   bool _isLoadingComments = true; // Already exists
@@ -74,7 +72,7 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
       // _expandedReplies.clear(); // Optionally reset expanded states
     });
     try {
-      _allComments = await ApiService.getVideoComments(widget.video.id);
+      _allComments = await ApiService.getVideoComments(widget.video.tmdbId);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -134,7 +132,7 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
 
     try {
       await ApiService.addComment(
-        widget.video.id,
+        widget.video.tmdbId,
         _commentController.text,
         _userRating, // Or handle rating input if it's still relevant for comments
         parentId: _replyingToCommentId,
@@ -207,7 +205,7 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
         }
 
         // Authenticated user view
-        final bool isFavorite = favoritesProvider.isFavorite(widget.video.id);
+        final bool isFavorite = favoritesProvider.isFavorite(widget.video.tmdbId);
         final double averageRating = widget.video.rating;
 
         return Scaffold(
@@ -384,7 +382,7 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
                                 Icons.movie_outlined,
                               ),
                               _buildEnhancedInfoChip(
-                                widget.video.categories.take(2).join(', '),
+                                widget.video.genre.take(2).join(', '),
                                 Colors.blueGrey,
                                 Icons.category_outlined,
                               ),
@@ -783,7 +781,7 @@ class _VideoDetailScreenState extends State<VideoDetailScreen>
       }
       final parentComment = _allComments.firstWhere(
         (c) => c.id == _replyingToCommentId, // Removed ?. as _allComments is List<ReviewModel>
-        orElse: () => ReviewModel(id: '', videoId: '', userId: '', userName: 'Unknown', comment: '', rating: 0, timestamp: DateTime.now(), parentId: null), // Provide a default or handle null
+        orElse: () => ReviewModel(id: '', videoId: '', userId: '', userName: 'Unknown', comment: '', rating: 0, timestamp: DateTime.now(), parentId: null, replies: [] ), // Provide a default or handle null
       );
       // Ensure parentComment is not the default placeholder if `firstWhere` fails.
       // This check might be redundant if orElse provides a non-null valid ReviewModel.

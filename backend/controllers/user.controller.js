@@ -1,10 +1,6 @@
 import User from "../models/user.model.js";
 import Movie from "../models/movie.model.js";
-// Attempt to import mapMovieData. If movie.controller.js also exports it directly.
-// If it's not directly exported, we might need to define it or extract it to a shared utils file.
-// For now, let's assume it can be imported or we'll define a local version if needed.
 
-// Placeholder for mapMovieData if direct import fails or for clarity
 const mapMovieData = (movie) => {
   if (!movie) return null;
   return {
@@ -40,9 +36,9 @@ export const getMe = async (req, res) => {
         name: user.username,
         email: user.email,
         role: user.role,
-        favorites: user.favorites || [], // Ensure favorites is always an array
-        stripeCustomerId: user.stripeCustomerId, // Added
-        subscription: user.subscription          // Added
+        favorites: user.favorites || [],
+        stripeCustomerId: user.stripeCustomerId,
+        subscription: user.subscription,
       },
     });
   } catch (error) {
@@ -56,7 +52,7 @@ export const getMe = async (req, res) => {
 
 export const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find({}).populate("subscription");
+    const users = await User.find({ role : "customer"}).populate("subscription");
     res.status(200).json({
       success: true,
       data: users.map((user) => ({
@@ -67,7 +63,6 @@ export const getAllUsers = async (req, res) => {
         favorites: user.favorites || [],
         stripeCustomerId: user.stripeCustomerId,
         subscription: user.subscription,
-        watchHistory: user.watchHistory || [],
       })),
     });
   } catch (error) {
@@ -78,6 +73,7 @@ export const getAllUsers = async (req, res) => {
     });
   }
 };
+
 export const updateUsername = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -122,8 +118,8 @@ export const updateUsername = async (req, res) => {
         email: user.email,
         role: user.role,
         favorites: user.favorites || [],
-        stripeCustomerId: user.stripeCustomerId, // Added
-        subscription: user.subscription          // Added
+        stripeCustomerId: user.stripeCustomerId,
+        subscription: user.subscription,
       },
     });
   } catch (error) {
@@ -175,7 +171,7 @@ export const getUserFavorites = async (req, res) => {
 export const toggleFavorite = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { movieId: tmdbId } = req.params; // movieId is tmdbId
+    const { movieId: tmdbId } = req.params;
 
     const user = await User.findById(userId);
     if (!user) {
@@ -195,10 +191,8 @@ export const toggleFavorite = async (req, res) => {
     const isFavorite = currentFavorites.includes(tmdbId);
 
     if (isFavorite) {
-      // Remove from favorites
       user.favorites = currentFavorites.filter((favId) => favId !== tmdbId);
     } else {
-      // Add to favorites
       user.favorites.push(tmdbId);
     }
 
@@ -231,7 +225,6 @@ export const getWatchHistory = async (req, res) => {
         .json({ success: false, message: "User not found" });
     }
 
-    // Get the watch history sorted by most recent first
     const watchHistoryIds = user.watchHistory
       .sort((a, b) => b.watchedAt - a.watchedAt)
       .map((item) => item.videoId);
@@ -244,7 +237,6 @@ export const getWatchHistory = async (req, res) => {
       tmdbId: { $in: watchHistoryIds },
     });
 
-    // Sort movies in the same order as watchHistoryIds
     const sortedMovies = watchHistoryIds
       .map((id) => historyMovies.find((movie) => movie.tmdbId === id))
       .filter((movie) => movie !== null);
@@ -283,12 +275,10 @@ export const addToWatchHistory = async (req, res) => {
         .json({ success: false, message: "Movie not found" });
     }
 
-    // Remove existing entry if present
     user.watchHistory = user.watchHistory.filter(
       (item) => item.videoId !== tmdbId
     );
 
-    // Add new entry at the beginning
     user.watchHistory.unshift({
       videoId: tmdbId,
       watchedAt: new Date(),

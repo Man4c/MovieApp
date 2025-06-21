@@ -18,8 +18,6 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  // Removed _isSubscribed and _subscriptionEndDate as they will come from authProvider
-
   final _usernameFormKey = GlobalKey<FormState>();
   final _passwordFormKey = GlobalKey<FormState>();
 
@@ -38,6 +36,14 @@ class _ProfilePageState extends State<ProfilePage> {
     _currentPasswordController = TextEditingController();
     _newPasswordController = TextEditingController();
     _confirmPasswordController = TextEditingController();
+
+    // Add this to refresh data when screen opens
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
+        authProvider.refreshUserData();
+      }
+    });
   }
 
   @override
@@ -73,9 +79,9 @@ class _ProfilePageState extends State<ProfilePage> {
                   // Header Section
                   Container(
                     padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF23262A),
-                      borderRadius: const BorderRadius.only(
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF23262A),
+                      borderRadius: BorderRadius.only(
                         bottomLeft: Radius.circular(24),
                         bottomRight: Radius.circular(24),
                       ),
@@ -84,10 +90,10 @@ class _ProfilePageState extends State<ProfilePage> {
                       children: [
                         Row(
                           children: [
-                            CircleAvatar(
+                            const CircleAvatar(
                               radius: 40,
-                              backgroundColor: const Color(0xFFE53935),
-                              child: const Icon(
+                              backgroundColor: Color(0xFFE53935),
+                              child: Icon(
                                 Icons.person,
                                 size: 40,
                                 color: Colors.white,
@@ -118,8 +124,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                             ),
                             if (authProvider.isAuthenticated &&
-                                authProvider.user?.googleId ==
-                                    null) // Only show edit for non-google users
+                                authProvider.user?.googleId == null)
                               IconButton(
                                 icon: const Icon(
                                   Icons.edit,
@@ -140,16 +145,28 @@ class _ProfilePageState extends State<ProfilePage> {
                         ),
                         const SizedBox(height: 24),
                         // Subscription Status Card
-                        Builder( // Use Builder to get context for authProvider
+                        Builder(
                           builder: (context) {
                             final user = authProvider.user;
                             final subscription = user?.subscription;
-                            final bool isActiveSubscriber = subscription?.status == 'active';
-                            String planText = 'Plan: ${subscription?.planId ?? 'N/A'}';
-                            String endDateText = 'N/A';
-                            if (subscription?.currentPeriodEnd != null) {
-                              endDateText = DateFormat('dd MMM yyyy').format(subscription!.currentPeriodEnd!);
-                            }
+                            final bool isActiveSubscriber =
+                                authProvider.hasActiveSubscription;
+
+                            // Format subscription details
+                            String planName = _getPlanName(
+                              subscription?.planId,
+                            );
+                            String statusText =
+                                subscription?.status?.toUpperCase() ??
+                                'NO SUBSCRIPTION';
+                            String endDateText =
+                                subscription?.currentPeriodEnd != null
+                                    ? DateFormat(
+                                      'dd MMM yyyy',
+                                    ).format(subscription!.currentPeriodEnd!)
+                                    : 'N/A';
+                            String subscriptionIdText =
+                                subscription?.subscriptionId ?? 'N/A';
 
                             return Container(
                               padding: const EdgeInsets.all(16),
@@ -157,78 +174,118 @@ class _ProfilePageState extends State<ProfilePage> {
                                 color: const Color(0xFF2C2F33),
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: Row(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: isActiveSubscriber
-                                          ? const Color(0xFFE53935).withOpacity(0.1)
-                                          : Colors.grey.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Icon(
-                                      isActiveSubscriber ? Icons.star : Icons.star_border,
-                                      color: isActiveSubscriber ? const Color(0xFFE53935) : Colors.grey,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          isActiveSubscriber ? 'Premium Subscription Active' : 'No Active Subscription',
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w600,
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            isActiveSubscriber
+                                                ? Icons.stars
+                                                : Icons.star_border,
+                                            color:
+                                                isActiveSubscriber
+                                                    ? const Color(0xFFE53935)
+                                                    : Colors.grey,
+                                            size: 24,
                                           ),
-                                        ),
-                                        if (isActiveSubscriber) ...[
-                                          const SizedBox(height: 4),
+                                          const SizedBox(width: 8),
                                           Text(
-                                            '$planText - Renews on: $endDateText',
-                                            style: TextStyle(
-                                              color: Colors.white.withOpacity(0.7),
-                                              fontSize: 14,
+                                            isActiveSubscriber
+                                                ? 'Active Subscription'
+                                                : 'No Active Subscription',
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
                                             ),
                                           ),
-                                        ] else ... [
-                                          const SizedBox(height: 4),
-                                           Text(
-                                            'Upgrade to unlock premium features.',
-                                            style: TextStyle(
-                                              color: Colors.white.withOpacity(0.7),
-                                              fontSize: 14,
-                                            ),
-                                          ),
-                                        ]
-                                      ],
-                                    ),
+                                        ],
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.refresh,
+                                          color: Colors.white70,
+                                        ),
+                                        onPressed:
+                                            () =>
+                                                authProvider.refreshUserData(),
+                                      ),
+                                    ],
                                   ),
-                                  TextButton(
-                                    onPressed: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(builder: (context) => const SubscriptionScreen()),
-                                      );
-                                    },
-                                    child: Text(
-                                      isActiveSubscriber ? 'Manage' : 'Subscribe',
-                                      style: const TextStyle(
-                                        color: Color(0xFFE53935),
-                                        fontWeight: FontWeight.w600,
+                                  if (isActiveSubscriber) ...[
+                                    const SizedBox(height: 16),
+                                    _buildSubscriptionDetail(
+                                      'Plan',
+                                      planName,
+                                      Icons.card_membership,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    _buildSubscriptionDetail(
+                                      'Status',
+                                      statusText,
+                                      Icons.info_outline,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    _buildSubscriptionDetail(
+                                      'Renewal',
+                                      endDateText,
+                                      Icons.event_repeat,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    _buildSubscriptionDetail(
+                                      'ID',
+                                      subscriptionIdText,
+                                      Icons.confirmation_number_outlined,
+                                    ),
+                                  ] else
+                                    Text(
+                                      'Subscribe to unlock premium features and content',
+                                      style: TextStyle(
+                                        color: Colors.white.withOpacity(0.7),
+                                      ),
+                                    ),
+                                  const SizedBox(height: 16),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: ElevatedButton(
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(
+                                          0xFFE53935,
+                                        ),
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 12,
+                                        ),
+                                      ),
+                                      onPressed: () {
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder:
+                                                (_) =>
+                                                    const SubscriptionScreen(),
+                                          ),
+                                        );
+                                      },
+                                      child: Text(
+                                        isActiveSubscriber
+                                            ? 'Manage Subscription'
+                                            : 'Subscribe Now',
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white,
+                                        ),
                                       ),
                                     ),
                                   ),
                                 ],
                               ),
                             );
-                          }
-                        ),
-                      ],
-                          ),
+                          },
                         ),
                       ],
                     ),
@@ -271,9 +328,6 @@ class _ProfilePageState extends State<ProfilePage> {
                           title: 'Pengaturan Akun',
                           subtitle: 'Ubah username & password',
                           onTap: () {
-                            // For this subtask, let's make "Pengaturan Akun" show a dialog
-                            // that gives options or directly shows change password if username is separate.
-                            // Or, we can make it directly trigger change password if edit username is via the top icon.
                             if (authProvider.isAuthenticated &&
                                 authProvider.user?.googleId == null) {
                               _showChangePasswordDialog(context, authProvider);
@@ -297,20 +351,34 @@ class _ProfilePageState extends State<ProfilePage> {
                             // TODO: Navigate to help
                           },
                         ),
-                        _buildMenuItem( // Refresh User Data Button
+                        _buildMenuItem(
+                          // Refresh User Data Button
                           icon: Icons.refresh,
                           title: 'Refresh Account Data',
-                          subtitle: 'Update your profile and subscription status',
+                          subtitle:
+                              'Update your profile and subscription status',
                           onTap: () async {
                             try {
                               await authProvider.refreshUserData();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('User data refreshed successfully!')),
-                              );
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'User data refreshed successfully!',
+                                    ),
+                                  ),
+                                );
+                              }
                             } catch (e) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Failed to refresh user data: $e')),
-                              );
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Failed to refresh user data: $e',
+                                    ),
+                                  ),
+                                );
+                              }
                             }
                           },
                         ),
@@ -323,21 +391,25 @@ class _ProfilePageState extends State<ProfilePage> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => const AdminUserListScreen(),
+                                  builder:
+                                      (context) => const AdminUserListScreen(),
                                 ),
                               );
                             },
                           ),
                         if (authProvider.user?.role == 'admin')
                           _buildMenuItem(
-                            icon: Icons.movie_creation_outlined, // Or Icons.add_to_photos, Icons.video_call
+                            icon:
+                                Icons
+                                    .movie_creation_outlined, // Or Icons.add_to_photos, Icons.video_call
                             title: 'Add New Movie',
                             subtitle: 'Add a new movie to the catalog',
                             onTap: () {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => const AdminAddMovieScreen(),
+                                  builder:
+                                      (context) => const AdminAddMovieScreen(),
                                 ),
                               );
                             },
@@ -470,25 +542,31 @@ class _ProfilePageState extends State<ProfilePage> {
                     await authProvider.updateUsername(
                       _newUsernameController.text,
                     );
-                    Navigator.of(dialogContext).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Username berhasil diperbarui!'),
-                      ),
-                    );
-                  } catch (e) {
-                    Navigator.of(dialogContext).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Gagal memperbarui username: ${e.toString()}',
+                    if (mounted) {
+                      Navigator.of(dialogContext).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Username berhasil diperbarui!'),
                         ),
-                      ),
-                    );
+                      );
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      Navigator.of(dialogContext).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Gagal memperbarui username: ${e.toString()}',
+                          ),
+                        ),
+                      );
+                    }
                   } finally {
-                    setState(() {
-                      _isLoadingUsername = false;
-                    });
+                    if (mounted) {
+                      setState(() {
+                        _isLoadingUsername = false;
+                      });
+                    }
                   }
                 }
               },
@@ -518,7 +596,6 @@ class _ProfilePageState extends State<ProfilePage> {
           content: Form(
             key: _passwordFormKey,
             child: SingleChildScrollView(
-              // Added SingleChildScrollView
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
@@ -617,28 +694,31 @@ class _ProfilePageState extends State<ProfilePage> {
                       _currentPasswordController.text,
                       _newPasswordController.text,
                     );
-                    Navigator.of(dialogContext).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Password berhasil diubah!'),
-                      ),
-                    );
-                  } catch (e) {
-                    // Check if dialogContext is still mounted before showing SnackBar
-                    if (!Navigator.of(dialogContext).mounted) return;
-                    // Error might be shown by the dialog itself, or pop and show
-                    Navigator.of(dialogContext).pop(); // Pop first
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Gagal mengubah password: ${e.toString()}',
+                    if (mounted) {
+                      Navigator.of(dialogContext).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Password berhasil diubah!'),
                         ),
-                      ),
-                    );
+                      );
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      Navigator.of(dialogContext).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            'Gagal mengubah password: ${e.toString()}',
+                          ),
+                        ),
+                      );
+                    }
                   } finally {
-                    setState(() {
-                      _isLoadingPassword = false;
-                    });
+                    if (mounted) {
+                      setState(() {
+                        _isLoadingPassword = false;
+                      });
+                    }
                   }
                 }
               },
@@ -700,6 +780,74 @@ class _ProfilePageState extends State<ProfilePage> {
       ),
     );
   }
+
+  // Helper function to get color based on subscription status
+  Color _getStatusColor(String? status) {
+    switch (status?.toLowerCase()) {
+      case 'active':
+        return Colors.green;
+      case 'canceled':
+      case 'cancelled':
+        return Colors.orange;
+      case 'incomplete':
+      case 'incomplete_expired':
+        return Colors.red;
+      case 'trialing':
+        return Colors.blue;
+      case 'past_due':
+        return Colors.deepOrange;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  // Helper function to build subscription detail row
+  Widget _buildSubscriptionDetail(String label, String value, IconData icon) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: Colors.white.withOpacity(0.7)),
+        const SizedBox(width: 8),
+        Text(
+          '$label: ',
+          style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 14),
+        ),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _getPlanName(String? planId) {
+    return {
+          'price_1OXST2Htj6wIa7rMQDz2GAxc': 'Basic Plan (720p)',
+          'price_1OXST2Htj6wIa7rMoYlgA7Bm': 'Premium Plan (1080p)',
+          'price_1OXSUAHtj6wIa7rMPmeNgqkx': 'Pro Plan (4K + HDR)',
+        }[planId ?? ''] ??
+        'Unknown Plan';
+  }
+
+  Future<void> _refreshSubscriptionData(AuthProvider authProvider) async {
+    try {
+      await authProvider.refreshUserData();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Subscription data updated!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to refresh data: $e')));
+      }
+    }
+  }
 }
 
 class WatchHistoryItem {
@@ -717,9 +865,11 @@ class WatchHistoryItem {
 
   // Factory constructor to create from VideoModel
   factory WatchHistoryItem.fromVideo(dynamic video) {
+    // It's highly recommended to replace 'dynamic' with a concrete VideoModel class
+    // for type safety, as mentioned in the analysis.
     return WatchHistoryItem(
-      id: video.id,
-      thumbnailUrl: video.thumbnailUrl,
+      id: video.tmdbId,
+      thumbnailUrl: video.posterPath,
       episodeInfo: video.type.isNotEmpty ? video.type.first : 'Movie',
       title: video.title,
     );
@@ -743,7 +893,6 @@ class WatchHistorySection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Judul bagian
           const Text(
             'Riwayat Tontonan',
             style: TextStyle(
@@ -753,16 +902,14 @@ class WatchHistorySection extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          // Kartu utama
           Container(
             decoration: BoxDecoration(
-              color: Color(0xFF23262A),
+              color: const Color(0xFF23262A),
               borderRadius: BorderRadius.circular(24),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header kartu
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
@@ -833,9 +980,9 @@ class WatchHistorySection extends StatelessWidget {
                                       horizontal: 8,
                                       vertical: 2,
                                     ),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFF0099E6),
-                                      borderRadius: const BorderRadius.only(
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFF0099E6),
+                                      borderRadius: BorderRadius.only(
                                         topRight: Radius.circular(8),
                                         bottomLeft: Radius.circular(12),
                                       ),

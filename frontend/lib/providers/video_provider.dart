@@ -36,13 +36,13 @@ class VideoProvider with ChangeNotifier {
 
       _isLoading = true;
       notifyListeners();
+
+      // Call API with supported parameters only
       final videos = await ApiService.getVideos(
         category:
             category ?? (_selectedCategory == "All" ? null : _selectedCategory),
         search: _searchQuery,
         page: loadAll ? null : _currentPage,
-        loadAll: loadAll,
-        filterType: filterType,
       );
 
       if (refresh) {
@@ -82,7 +82,7 @@ class VideoProvider with ChangeNotifier {
     }
     return _allVideos
         .where(
-          (video) => video.categories.any(
+          (video) => video.genre.any(
             (cat) => cat.toLowerCase() == categoryName.toLowerCase(),
           ),
         )
@@ -92,7 +92,7 @@ class VideoProvider with ChangeNotifier {
   List<String> getCategories() {
     Set<String> uniqueCategories = {};
     for (var video in _allVideos) {
-      for (var category in video.categories) {
+      for (var category in video.genre) {
         uniqueCategories.add(category);
       }
     }
@@ -101,7 +101,7 @@ class VideoProvider with ChangeNotifier {
 
   VideoModel? getVideoById(String id) {
     try {
-      return _allVideos.firstWhere((video) => video.id == id);
+      return _allVideos.firstWhere((video) => video.tmdbId == id);
     } catch (e) {
       return null;
     }

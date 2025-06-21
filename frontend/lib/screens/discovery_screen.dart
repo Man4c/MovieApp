@@ -12,10 +12,11 @@ class DiscoveryScreen extends StatefulWidget {
 
 class _DiscoveryScreenState extends State<DiscoveryScreen> {
   List<String> _genres = [];
-  // This map will now be populated with the first movie of each genre on initial load.
   final Map<String, VideoModel> _firstMovieByGenre = {};
   bool _isLoading = true;
-  String? _tappedGenre; // To show a loading indicator on the specific tapped card
+  String? _tappedGenre;
+  String? _error;
+  Map<String, bool> _genreLoading = {};
 
   @override
   void initState() {
@@ -23,48 +24,77 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
     _fetchInitialData();
   }
 
-  // NEW: Combined fetch method for genres and their first movie poster
   Future<void> _fetchInitialData() async {
+    if (!mounted) return;
+
     setState(() {
       _isLoading = true;
+      _error = null;
+      _genreLoading.clear();
     });
 
     try {
-      // 1. Fetch all genre names
+      print('Fetching genre names...'); // Debug log
       final genres = await ApiService.getMovieTypes();
+      print('Received genres: $genres'); // Debug log
+
+      if (!mounted) return;
+
       final validGenres = genres.where((genre) => genre.isNotEmpty).toList();
       setState(() {
         _genres = validGenres;
+        // Initialize loading state for each genre
+        for (var genre in validGenres) {
+          _genreLoading[genre] = true;
+        }
       });
 
-      // 2. For each genre, fetch its first movie in parallel
-      List<Future<void>> futures = validGenres.map((genre) async {
+      print('Fetching movies for each genre...'); // Debug log
+
+      // Use Future.wait to fetch all genres in parallel
+      final futures = validGenres.map((genre) async {
         try {
-          // Fetch only the first page/batch of movies to find a poster, not all.
-          final movies = await ApiService.getVideos(
-            category: genre,
-            loadAll: false, // More efficient than loading all movies
-            filterType: 'genre',
-          );
-          if (movies.isNotEmpty) {
-            _firstMovieByGenre[genre] = movies.first;
-          }
+          final movies = await ApiService.getVideos(category: genre);
+          print(
+            'Received ${movies.length} movies for genre $genre',
+          ); // Debug log
+
+          if (!mounted) return;
+
+          setState(() {
+            if (movies.isNotEmpty) {
+              _firstMovieByGenre[genre] = movies.first;
+            }
+            _genreLoading[genre] = false;
+          });
         } catch (e) {
-          // If fetching for one genre fails, don't stop the whole process
-          debugPrint("Could not fetch preview for genre $genre: $e");
+          print('Error fetching movies for genre $genre: $e'); // Debug log
+          if (!mounted) return;
+          setState(() {
+            _genreLoading[genre] = false;
+          });
         }
-      }).toList();
+      });
 
-      // Wait for all fetches to complete
       await Future.wait(futures);
-
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load discovery data: ${e.toString()}')),
-        );
-      }
-      debugPrint("Error fetching initial discovery data: $e");
+      print('Error in _fetchInitialData: $e'); // Debug log
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to load discovery data: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(
+            label: 'Retry',
+            textColor: Colors.white,
+            onPressed: _fetchInitialData,
+          ),
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -74,45 +104,49 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
     }
   }
 
-  // MODIFIED: This now fetches the *full list* of movies for navigation
   Future<void> _fetchMoviesAndNavigate(String genre) async {
     setState(() {
-      _tappedGenre = genre; // Show loading indicator on this specific card
+      _tappedGenre = genre;
     });
 
     try {
-      // Fetch the complete list of movies for the selected genre
-      final movies = await ApiService.getVideos(
-        category: genre,
-        loadAll: true, // Load all movies for the genre screen
-        filterType: 'genre',
-      );
+      final movies = await ApiService.getVideos(category: genre);
 
-      if (mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => GenreMoviesScreen(
-              genreName: genre,
-              initialMovies: movies,
-              isType: false,
-            ),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
+      if (!mounted) return;
+
+      if (movies.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to load movies for $genre: ${e.toString()}'),
+            content: Text('No movies found for $genre'),
+            backgroundColor: Colors.orange,
           ),
         );
+        return;
       }
-      debugPrint("Error fetching movies for $genre: $e");
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder:
+              (context) => GenreMoviesScreen(
+                genreName: genre,
+                initialMovies: movies,
+                isType: false,
+              ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to load movies for $genre: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() {
-          _tappedGenre = null; // Hide loading indicator
+          _tappedGenre = null;
         });
       }
     }
@@ -122,147 +156,156 @@ class _DiscoveryScreenState extends State<DiscoveryScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: SafeArea(
-        child: _isLoading
-            ? const Center(
-                child: CircularProgressIndicator(color: Colors.deepOrange),
-              )
-            : _buildGenreList(),
-      ),
+      body: SafeArea(child: _buildContent()),
     );
   }
 
-  Widget _buildGenreList() {
-    if (_genres.isEmpty) {
+  Widget _buildContent() {
+    if (_isLoading) {
       return const Center(
-        child: Text(
-          'No genres available at the moment.',
-          style: TextStyle(color: Colors.white70, fontSize: 16),
-          textAlign: TextAlign.center,
+        child: CircularProgressIndicator(color: Colors.deepOrange),
+      );
+    }
+
+    if (_error != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              'Failed to load content',
+              style: const TextStyle(color: Colors.white70, fontSize: 16),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _fetchInitialData,
+              child: const Text('Retry'),
+            ),
+          ],
         ),
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      itemCount: _genres.length,
-      itemBuilder: (context, index) {
-        final genre = _genres[index];
-        final movie = _firstMovieByGenre[genre];
-        return _buildGenreCard(genre, movie);
-      },
-    );
-  }
-
-  // REWRITTEN: The UI for the genre card is now completely different
-  Widget _buildGenreCard(String genre, VideoModel? movie) {
-    final bool isTapped = _tappedGenre == genre;
-    final hasImage = movie?.thumbnailUrl != null && movie!.thumbnailUrl.isNotEmpty;
-
-    return Container(
-      height: 120, // Give the card a fixed height
-      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12.0),
-        child: Material(
-          color: Colors.grey[900], // Fallback color
-          child: InkWell(
-            onTap: () => _fetchMoviesAndNavigate(genre),
-            child: Stack(
-              fit: StackFit.expand, // Make stack children fill the container
-              children: [
-                // 1. Background Image
-                if (hasImage)
-                  Image.network(
-                    movie!.thumbnailUrl,
-                    fit: BoxFit.cover,
-                    // Add a loading builder for a smoother experience
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return const Center(child: CircularProgressIndicator(strokeWidth: 2.0, color: Colors.white54,));
-                    },
-                    errorBuilder: (context, error, stackTrace) {
-                      // Fallback in case of image load error
-                      return _buildPlaceholderBackground();
-                    },
-                  ),
-
-                if (!hasImage)
-                  _buildPlaceholderBackground(),
-
-                // 2. Gradient Overlay for text readability
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Colors.black.withOpacity(0.8),
-                        Colors.black.withOpacity(0.2),
-                        Colors.black.withOpacity(0.8),
-                      ],
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
-                    ),
-                  ),
-                ),
-
-                // 3. Content (Text and Icon)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          genre,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 22.0,
-                            fontWeight: FontWeight.bold,
-                            shadows: [
-                              Shadow(
-                                blurRadius: 10.0,
-                                color: Colors.black,
-                                offset: Offset(2.0, 2.0),
-                              ),
-                            ]
-                          ),
-                        ),
-                      ),
-
-                      // Show a loader if this specific card was tapped
-                      isTapped
-                          ? const SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2.5,
-                              ),
-                            )
-                          : const Icon(
-                              Icons.arrow_forward_ios,
-                              color: Colors.white,
-                              size: 24.0,
-                            ),
-                    ],
-                  ),
-                ),
-              ],
+    if (_genres.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text(
+              'No genres available',
+              style: TextStyle(color: Colors.white70, fontSize: 16),
             ),
-          ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _fetchInitialData,
+              child: const Text('Retry'),
+            ),
+          ],
         ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _fetchInitialData,
+      child: ListView.builder(
+        padding: const EdgeInsets.symmetric(vertical: 8.0),
+        itemCount: _genres.length,
+        itemBuilder: (context, index) {
+          final genre = _genres[index];
+          final movie = _firstMovieByGenre[genre];
+          final isLoading = _genreLoading[genre] ?? false;
+          return _buildGenreCard(genre, movie, isLoading);
+        },
       ),
     );
   }
 
-  // Helper for placeholder gradient background
-  Widget _buildPlaceholderBackground() {
+  Widget _buildGenreCard(String genre, VideoModel? movie, bool isLoading) {
+    final bool isTapped = _tappedGenre == genre;
+    final hasImage = movie?.posterPath != null && movie!.posterPath.isNotEmpty;
+
     return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Colors.deepOrange[800]!, Colors.grey[900]!],
+      height: 120,
+      margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12.0),
+        child: Material(
+          color: Colors.grey[900],
+          child: InkWell(
+            onTap: isTapped ? null : () => _fetchMoviesAndNavigate(genre),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (hasImage && movie != null)
+                  Image.network(
+                    movie.posterPath,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return const Center(
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.0,
+                          color: Colors.white54,
+                        ),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      print('Error loading image: $error');
+                      return const SizedBox.shrink();
+                    },
+                  ),
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                      colors: [
+                        Colors.black.withOpacity(0.8),
+                        Colors.black.withOpacity(0.5),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+                Positioned(
+                  left: 16.0,
+                  top: 0,
+                  bottom: 0,
+                  child: Center(
+                    child: Row(
+                      children: [
+                        Text(
+                          genre,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 24.0,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        if (isLoading)
+                          const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2.0,
+                              color: Colors.white54,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+                if (isTapped)
+                  Container(
+                    color: Colors.black.withOpacity(0.5),
+                    child: const Center(
+                      child: CircularProgressIndicator(color: Colors.white),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
     );

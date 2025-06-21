@@ -36,12 +36,7 @@ class _GenreMoviesScreenState extends State<GenreMoviesScreen> {
     if (!_initialLoadTriggered) {
       final videoProvider = Provider.of<VideoProvider>(context, listen: false);
       if (widget.initialMovies == null) {
-        videoProvider.loadVideos(
-          refresh: true,
-          loadAll: true,
-          category: widget.genreName,
-          filterType: widget.isType ? 'type' : 'genre',
-        );
+        videoProvider.loadVideos(refresh: true, category: widget.genreName);
       }
       _initialLoadTriggered = true;
     }

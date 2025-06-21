@@ -6,11 +6,11 @@ import User from "../models/user.model.js";
 export const addMovieComment = async (req, res) => {
   try{
     const { comment, rating, parentId } = req.body;
-    const { tmdbId: movieId } = req.params; // tmdbId is the movieId
+    const { tmdbId: movieId } = req.params; 
     const userId = req.user.id;
     const userRole = req.user.role;
 
-    // Check if it's a reply and if the user is not an admin
+
     if (parentId && userRole !== "admin") {
       return res.status(403).json({
         success: false,
@@ -19,7 +19,6 @@ export const addMovieComment = async (req, res) => {
       });
     }
 
-    // Validate movie exists
     const movie = await Movie.findOne({ tmdbId: movieId });
     if (!movie) {
       return res.status(404).json({ success: false, message: "Movie not found" });
@@ -27,29 +26,29 @@ export const addMovieComment = async (req, res) => {
 
     // Create new comment
     const newComment = new Comment({
-      id: new mongoose.Types.ObjectId().toString(), // Generate unique ID
-      videoId: movieId, // Store tmdbId as videoId
+      id: new mongoose.Types.ObjectId().toString(),
+      videoId: movieId, 
       userId,
       comment,
       rating,
-      parentId: parentId || null, // Add parentId
+      parentId: parentId || null, 
     });
 
     await newComment.save();
 
-    // Map response
+    
     const populatedComment = await Comment.findById(newComment._id).populate('userId', '_id username');
 
     res.status(201).json({
       success: true,
       data: {
-        id: populatedComment.id, // Use the generated string id
+        id: populatedComment.id, 
         videoId: populatedComment.videoId,
         comment: populatedComment.comment,
         rating: populatedComment.rating,
-        parentId: populatedComment.parentId, // Include parentId in response
-        user: { // Changed from userId to user object
-          id: populatedComment.userId._id, // keep original user ObjectId if needed
+        parentId: populatedComment.parentId, 
+        user: { 
+          id: populatedComment.userId._id, 
           name: populatedComment.userId.username
         },
         timestamp: populatedComment.createdAt,
@@ -95,7 +94,7 @@ export const getMovieComments = async (req, res) => {
     res.status(200).json({
       success: true,
       count: mappedComments.length,
-      data: mappedComments, // Send the flat list
+      data: mappedComments, 
     });
   } catch (error) {
     res.status(500).json({

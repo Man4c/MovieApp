@@ -12,13 +12,13 @@ class CommentCard extends StatelessWidget {
   final VoidCallback onStartReply;    // Changed from Function(String)
 
   const CommentCard({
-    Key? key,
+    super.key,
     required this.comment,
     required this.replyCount,
     required this.isExpanded,
     required this.onToggleReplies,
     required this.onStartReply,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

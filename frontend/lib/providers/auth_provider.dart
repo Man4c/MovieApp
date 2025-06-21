@@ -23,6 +23,11 @@ class AuthProvider with ChangeNotifier {
   bool get isInitialized => _isInitialized;
   String? get token => _token;
   UserModel? get user => _user;
+  bool get hasActiveSubscription {
+    if (_user?.subscription == null) return false;
+    final status = _user?.subscription?.status?.toLowerCase();
+    return status == 'incomplete' || status == 'trialing';
+  }
 
   AuthProvider() {
     _loadAuthState();
@@ -33,12 +38,12 @@ class AuthProvider with ChangeNotifier {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString(_tokenKey);
       final userJson = prefs.getString(_userKey);
-
       if (token != null && userJson != null) {
         _token = token;
         _user = UserModel.fromJson(json.decode(userJson));
         _isAuthenticated = true;
-        ApiService.setToken(token);
+        print('Setting token in ApiService: $token'); // Debug log
+        ApiService.setToken(token); // Set token in API service
       }
     } catch (e) {
       print('Error loading auth state: $e');
@@ -230,7 +235,6 @@ class AuthProvider with ChangeNotifier {
 
   Future<void> checkSession() async {
     if (!_isAuthenticated || _token == null) return;
-
     try {
       final isValid = await verifyToken();
       if (!isValid) {
@@ -244,24 +248,19 @@ class AuthProvider with ChangeNotifier {
   }
 
   Future<void> refreshUserData() async {
-    if (_token == null) {
-      print('Cannot refresh user data: No token available.');
-      // Optionally throw an error or handle as appropriate
-      return;
-    }
+    if (!_isAuthenticated || _token == null) return;
+
     try {
-      print('Refreshing user data...');
-      // Assuming ApiService.getCurrentUser() fetches the full user profile
-      // including any new subscription details.
-      final UserModel updatedUser = await ApiService.getCurrentUser();
+      final updatedUser = await ApiService.getCurrentUser();
       _user = updatedUser;
-      await _saveAuthState(); // Save the updated user details
+      await _saveAuthState();
       notifyListeners();
-      print('User data refreshed.');
+      print(
+        'User data refreshed. Subscription status: ${_user?.subscription?.status}',
+      );
     } catch (e) {
       print('Error refreshing user data: $e');
-      // Handle error appropriately, e.g., if it's an auth error, maybe logout
-      // if (e is YouAuthException && e.statusCode == 401) await logout();
+      rethrow;
     }
   }
 }

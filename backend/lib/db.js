@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 
-// Ensure environment variables are loaded
+
 dotenv.config();
 
 const connectDB = async () => {
@@ -13,7 +13,7 @@ const connectDB = async () => {
     }
 
     console.log("Attempting to connect to MongoDB...");
-    console.log("Connection URI:", mongoUri.replace(/:[^:]*@/, ":****@")); // Hide password
+    console.log("Connection URI:", mongoUri.replace(/:[^:]*@/, ":****@")); 
 
     const conn = await mongoose.connect(mongoUri);
 

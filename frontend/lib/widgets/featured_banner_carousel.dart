@@ -120,7 +120,7 @@ class _FeaturedBannerCarouselState extends State<FeaturedBannerCarousel> {
                   imageUrl:
                       (video.backdropPath.isNotEmpty)
                           ? video.backdropPath
-                          : video.thumbnailUrl,
+                          : video.posterPath,
                   fit: BoxFit.cover,
                   placeholder:
                       (context, url) => Container(

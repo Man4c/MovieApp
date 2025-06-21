@@ -28,8 +28,8 @@ const commentSchema = new mongoose.Schema(
     },
     parentId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Comment", // Self-referential
-      default: null, // Or remove default if you want it to be explicitly set
+      ref: "Comment",
+      default: null, 
     },
   },
   { timestamps: true }

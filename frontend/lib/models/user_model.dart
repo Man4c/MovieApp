@@ -19,9 +19,10 @@ class SubscriptionDetails {
       subscriptionId: json['subscriptionId'] as String?,
       planId: json['planId'] as String?,
       status: json['status'] as String?,
-      currentPeriodEnd: json['currentPeriodEnd'] != null
-          ? DateTime.tryParse(json['currentPeriodEnd'] as String)
-          : null,
+      currentPeriodEnd:
+          json['currentPeriodEnd'] != null
+              ? DateTime.tryParse(json['currentPeriodEnd'] as String)
+              : null,
     );
   }
 
@@ -55,13 +56,16 @@ class UserModel {
     required this.role,
     this.googleId,
     this.stripeCustomerId, // Added to constructor
-    this.subscription,     // Added to constructor
+    this.subscription, // Added to constructor
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
       id: json['_id'] as String? ?? json['id'] as String? ?? '',
-      name: json['username'] as String? ?? 'crespo',
+      name:
+          json['name'] as String? ??
+          json['username'] as String? ??
+          '', // Try both name and username fields
       email: json['email'] as String? ?? '',
       favorites: List<String>.from(json['favorites'] as List? ?? []),
       watchHistory: List<String>.from(
@@ -69,10 +73,14 @@ class UserModel {
       ), // Added parsing
       role: json['role'] as String? ?? 'customer',
       googleId: json['googleId'] as String?,
-      stripeCustomerId: json['stripeCustomerId'] as String?, // Parsing new field
-      subscription: json['subscription'] != null
-          ? SubscriptionDetails.fromJson(json['subscription'] as Map<String, dynamic>)
-          : null, // Parsing new field
+      stripeCustomerId:
+          json['stripeCustomerId'] as String?, // Parsing new field
+      subscription:
+          json['subscription'] != null
+              ? SubscriptionDetails.fromJson(
+                json['subscription'] as Map<String, dynamic>,
+              )
+              : null, // Parsing new field
     );
   }
 

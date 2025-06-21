@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter_video_app/providers/auth_provider.dart';
 import 'package:flutter_video_app/services/api_service.dart';
 import 'package:flutter_stripe/flutter_stripe.dart' hide Card;
 
@@ -36,14 +38,16 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   final List<Plan> _plans = [
     Plan(
       id: 'basic',
-      stripePriceId: 'prod_STA3xw2jK55AH0', // Get from Stripe Dashboard
+      stripePriceId:
+          'price_1RYDjQFJqSjpkwgi7LpWIYfj', // Your Basic Plan Price ID from Stripe
       name: 'Basic Plan',
       price: '\$5/month',
       description: 'Access to basic features.',
     ),
     Plan(
       id: 'premium',
-      stripePriceId: 'prod_STA0cSHWDDqN8e', // Get from Stripe Dashboard
+      stripePriceId:
+          'price_1RYDgNFJqSjpkwgim7nwsQ4F', // Your Premium Plan Price ID from Stripe
       name: 'Premium Plan',
       price: '\$10/month',
       description: 'Access to all premium features.',
@@ -64,9 +68,9 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
     try {
-      // In a real app, get this from your AuthProvider/state management
-      const String userId = 'currentUserPlaceholderId';
-      if (userId.isEmpty) {
+      // Get the current user from your AuthProvider
+      final currentUser = await ApiService.getMe();
+      if (currentUser == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Error: User not logged in.')),
         );
@@ -75,11 +79,14 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         });
         return;
       }
+      final userId = currentUser.id;
 
-      // <-- FIX: Pass the stripePriceId to your backend!
+      // Create subscription and get payment intent
       final Map<String, dynamic> response =
           await ApiService.createPaymentIntent(userId, plan.stripePriceId);
+
       final String? clientSecret = response['clientSecret'] as String?;
+      final String? subscriptionId = response['subscriptionId'] as String?;
 
       if (clientSecret == null || clientSecret.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -95,27 +102,38 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         return;
       }
 
+      // Initialize payment sheet
       await Stripe.instance.initPaymentSheet(
         paymentSheetParameters: SetupPaymentSheetParameters(
           paymentIntentClientSecret: clientSecret,
-          merchantDisplayName: 'Your Movie App',
+          merchantDisplayName: 'Movie App',
+          customerId: response['customerId'] as String?,
+          customerEphemeralKeySecret: response['ephemeralKey'] as String?,
         ),
-      );
-
+      ); // Present payment sheet and wait for result
       await Stripe.instance.presentPaymentSheet();
 
+      // Confirm subscription after successful payment
+      if (subscriptionId != null) {
+        await ApiService.confirmSubscription(subscriptionId);
+      }
+
+      // Refresh user data to get updated subscription status
+      await Provider.of<AuthProvider>(context, listen: false).refreshUserData();
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Payment successful! Your account will be updated shortly.',
-          ),
+        SnackBar(
+          content: Text('Payment successful! Your ${plan.name} is now active.'),
+          duration: const Duration(seconds: 4),
         ),
       );
-      // Success! You can navigate away or show a success dialog.
-      // The backend webhook will handle the actual subscription activation.
+
+      // Navigate back or to home screen after successful subscription
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
     } on StripeException catch (e) {
       print('StripeException: ${e.toString()}');
-      // <-- FIX: Access the error message correctly.
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
