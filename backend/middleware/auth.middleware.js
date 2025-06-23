@@ -1,5 +1,16 @@
 import jwt from "jsonwebtoken";
 import User from "../models/user.model.js";
+import admin from "firebase-admin";
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
+const serviceAccount = require("../serviceAccountKey.json");
+
+// Inisialisasi Firebase Admin hanya sekali
+if (!admin.apps.length) {
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+  });
+}
 
 export const protectRoute = async (req, res, next) => {
   const authHeader = req.headers["authorization"];
@@ -21,10 +32,10 @@ export const protectRoute = async (req, res, next) => {
     });
   }
 
+  // Coba verifikasi sebagai JWT lama dulu
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(decoded.userId).select("-password");
-
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -32,36 +43,21 @@ export const protectRoute = async (req, res, next) => {
         error: "USER_TOKEN_NOT_FOUND",
       });
     }
-
-    req.user = user; 
-    next();
-  } catch (error) {
-    
-    if (error.name === "TokenExpiredError") {
-      return res.status(401).json({
-        success: false,
-        message: "Token has expired",
-        error: "TOKEN_EXPIRED",
-      });
-    } else if (error.name === "JsonWebTokenError") {
+    req.user = user;
+    return next();
+  } catch (jwtError) {
+    // Jika gagal, coba verifikasi sebagai token Firebase
+    try {
+      const decodedFirebase = await admin.auth().verifyIdToken(token);
+      // Anda bisa mencari user di DB berdasarkan decodedFirebase.uid/email jika perlu
+      req.user = decodedFirebase;
+      return next();
+    } catch (firebaseError) {
+      // Jika gagal juga, kirim error invalid token
       return res.status(401).json({
         success: false,
         message: "Invalid token",
         error: "INVALID_TOKEN",
-      });
-    } else if (error.name === "NotBeforeError") {
-      return res.status(401).json({
-        success: false,
-        message: "Token not active yet",
-        error: "TOKEN_NOT_ACTIVE",
-      });
-    } else {
-    
-      console.error("Token verification unexpected error:", error);
-      return res.status(500).json({
-        success: false,
-        message: "Token verification failed",
-        error: "TOKEN_VERIFICATION_FAILED",
       });
     }
   }

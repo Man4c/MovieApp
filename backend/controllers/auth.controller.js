@@ -96,20 +96,31 @@ export const verifyGoogleToken = async (req, res) => {
   }
 
   try {
+    console.log("Starting Google token verification...");
+    console.log("Using GOOGLE_CLIENT_ID:", GOOGLE_CLIENT_ID);
+    
     const ticket = await client.verifyIdToken({
       idToken,
       audience: GOOGLE_CLIENT_ID,
     });
+    
+    console.log("Token verification successful");
     const payload = ticket.getPayload();
     const googleId = payload["sub"];
     const email = payload["email"];
     const displayName = payload["name"]; // Get full name from Google
 
+    console.log("Google payload:", {
+      googleId,
+      email,
+      displayName,
+      // Don't log the full payload as it may contain sensitive info
+    });
+
     // Find or create user
     let user = await User.findOne({ googleId });
-    console.log("Google payload:", payload);
-    console.log("Display name from Google:", displayName);
     if (user) {
+      console.log("Existing user found with googleId:", googleId);
       // User found with googleId, log them in
       const token = generateToken(user._id);
       return res.status(200).json({
@@ -129,9 +140,11 @@ export const verifyGoogleToken = async (req, res) => {
       });
     }
 
+    console.log("No existing user found with googleId:", googleId);
     // No user with googleId, check if email exists for a non-Google user
     const existingEmailUser = await User.findOne({ email });
     if (existingEmailUser && !existingEmailUser.googleId) {
+      console.log("Email already registered without Google:", email);
       return res.status(400).json({
         message:
           "Email already registered with a password. Please log in with your password or link your Google account (linking not implemented).",
@@ -140,14 +153,17 @@ export const verifyGoogleToken = async (req, res) => {
     }
 
     // If email exists with a googleId, it should have been caught by the first User.findOne({googleId})
-    // So, if we are here, it's a new user or an existing Google user whose googleId wasn't found (should not happen if DB is consistent)    let username = displayName;
+    // So, if we are here, it's a new user or an existing Google user whose googleId wasn't found (should not happen if DB is consistent)
+    let username = displayName;
     // Keep the display name as is for better user experience
     const userWithSameUsername = await User.findOne({ username });
     if (userWithSameUsername) {
       // If username exists, append a unique identifier but keep the display name readable
       username = `${displayName} ${Date.now().toString().slice(-4)}`;
+      console.log("Username already exists, using modified username:", username);
     }
 
+    console.log("Creating new user with Google account");
     user = new User({
       googleId,
       username,
@@ -174,6 +190,12 @@ export const verifyGoogleToken = async (req, res) => {
     });
   } catch (error) {
     console.error("Error verifying Google token:", error);
+    console.error("Error details:", {
+      name: error.name,
+      message: error.message,
+      stack: error.stack,
+    });
+    
     if (
       error.message.includes("Invalid token signature") ||
       error.message.includes("Token used too late") ||

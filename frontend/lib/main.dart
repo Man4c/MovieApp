@@ -11,12 +11,30 @@ import 'package:flutter_video_app/utils/theme.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'dart:io';
 import 'package:flutter_stripe/flutter_stripe.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'package:flutter/foundation.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  Stripe.publishableKey =
-      'pk_test_51RY4uWFJqSjpkwgibRAHFiYNTc4eNQGFOT9dJqy2SMaDXCmEqpPLREjn8tzwljV20rlbMj0CoxZZA2sO2JGAaK4X00TQgsctYR';
-  await Stripe.instance.applySettings();
+
+  // Tambahkan pengecekan agar tidak duplicate-app
+  try {
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    }
+  } catch (e) {
+    // Ignore duplicate-app error
+  }
+
+  // Inisialisasi Stripe hanya jika bukan di web
+  if (!kIsWeb) {
+    Stripe.publishableKey =
+        'pk_test_51RY4uWFJqSjpkwgibRAHFiYNTc4eNQGFOT9dJqy2SMaDXCmEqpPLREjn8tzwljV20rlbMj0CoxZZA2sO2JGAaK4X00TQgsctYR';
+    await Stripe.instance.applySettings();
+  }
 
   if (Platform.isAndroid) {
     await GoogleSignIn().signOut();

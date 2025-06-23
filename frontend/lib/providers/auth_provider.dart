@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_video_app/services/api_service.dart';
 import 'package:flutter_video_app/models/user_model.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class AuthProvider with ChangeNotifier {
   bool _isAuthenticated = false;
@@ -13,11 +14,8 @@ class AuthProvider with ChangeNotifier {
   UserModel? _user;
   static const String _tokenKey = 'auth_token';
   static const String _userKey = 'user_data';
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: ['email', 'profile'],
-    clientId:
-        '42959912450-2vtkro05bddrc4b1u6m3bd2kk292jsrn.apps.googleusercontent.com',
-  );
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   bool get isAuthenticated => _isAuthenticated;
   bool get isInitialized => _isInitialized;
@@ -31,19 +29,32 @@ class AuthProvider with ChangeNotifier {
 
   AuthProvider() {
     _loadAuthState();
+    // Listen to Firebase Auth state changes
+    _auth.authStateChanges().listen((User? firebaseUser) {
+      if (firebaseUser == null) {
+        _isAuthenticated = false;
+        _token = null;
+        _user = null;
+        notifyListeners();
+      }
+    });
   }
 
   Future<void> _loadAuthState() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString(_tokenKey);
-      final userJson = prefs.getString(_userKey);
-      if (token != null && userJson != null) {
-        _token = token;
-        _user = UserModel.fromJson(json.decode(userJson));
+      final currentUser = _auth.currentUser;
+      if (currentUser != null) {
+        _token = await currentUser.getIdToken();
+        _user = UserModel(
+          id: currentUser.uid,
+          name: currentUser.displayName ?? 'User',
+          email: currentUser.email ?? '',
+          role: 'user',
+          favorites: [],
+          watchHistory: [],
+        );
         _isAuthenticated = true;
-        print('Setting token in ApiService: $token'); // Debug log
-        ApiService.setToken(token); // Set token in API service
+        ApiService.setToken(_token!);
       }
     } catch (e) {
       print('Error loading auth state: $e');
@@ -77,53 +88,111 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  Future<void> login(String email, String password) async {
+  Future<void> signInWithGoogle() async {
     try {
-      final response = await http.post(
-        Uri.parse('${ApiService.baseUrl}/auth/login'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({'email': email, 'password': password}),
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return;
+
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
       );
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        await _handleAuthResponse(data);
-      } else {
-        throw Exception('Failed to login: ${response.body}');
+      final UserCredential userCredential = await _auth.signInWithCredential(
+        credential,
+      );
+      final User? user = userCredential.user;
+
+      if (user != null) {
+        _token = await user.getIdToken();
+        _user = UserModel(
+          id: user.uid,
+          name: user.displayName ?? 'User',
+          email: user.email ?? '',
+          role: 'user',
+          favorites: [],
+          watchHistory: [],
+          googleId: user.uid,
+        );
+        _isAuthenticated = true;
+        ApiService.setToken(_token!);
+        notifyListeners();
       }
     } catch (e) {
-      print("Error in login provider: $e");
+      print('Error during Google sign in: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> login(String email, String password) async {
+    try {
+      final UserCredential userCredential = await _auth
+          .signInWithEmailAndPassword(email: email, password: password);
+
+      final User? user = userCredential.user;
+      if (user != null) {
+        _token = await user.getIdToken();
+        _user = UserModel(
+          id: user.uid,
+          name: user.displayName ?? 'User',
+          email: user.email ?? '',
+          role: 'user',
+          favorites: [],
+          watchHistory: [],
+        );
+        _isAuthenticated = true;
+        ApiService.setToken(_token!);
+        notifyListeners();
+      }
+    } catch (e) {
+      print('Error during login: $e');
       rethrow;
     }
   }
 
   Future<void> register(String name, String email, String password) async {
     try {
-      final response = await http.post(
-        Uri.parse('${ApiService.baseUrl}/auth/signup'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({'name': name, 'email': email, 'password': password}),
-      );
+      final UserCredential userCredential = await _auth
+          .createUserWithEmailAndPassword(email: email, password: password);
 
-      if (response.statusCode == 201) {
-        final data = json.decode(response.body);
-        await _handleAuthResponse(data);
-      } else {
-        throw Exception('Failed to register: ${response.body}');
+      final User? user = userCredential.user;
+      if (user != null) {
+        await user.updateDisplayName(name);
+        _token = await user.getIdToken();
+        _user = UserModel(
+          id: user.uid,
+          name: name,
+          email: user.email ?? '',
+          role: 'user',
+          favorites: [],
+          watchHistory: [],
+        );
+        _isAuthenticated = true;
+        ApiService.setToken(_token!);
+        notifyListeners();
       }
     } catch (e) {
-      print("Error in register provider: $e");
+      print('Error during registration: $e');
       rethrow;
     }
   }
 
-  Future<void> _handleAuthResponse(Map<String, dynamic> response) async {
-    _token = response['token'];
-    _user = UserModel.fromJson(response['user']);
-    _isAuthenticated = true;
-    ApiService.setToken(_token!);
-    await _saveAuthState();
-    notifyListeners();
+  Future<void> logout() async {
+    try {
+      await _auth.signOut();
+      await _googleSignIn.signOut();
+      _token = null;
+      _user = null;
+      _isAuthenticated = false;
+      ApiService.setToken('');
+      await _clearAuthState();
+      notifyListeners();
+    } catch (e) {
+      print('Error during logout: $e');
+      rethrow;
+    }
   }
 
   Future<void> updateUsername(String newUsername) async {
@@ -158,87 +227,11 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  Future<void> signInWithGoogle() async {
-    try {
-      print('Starting Google Sign In...');
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) {
-        print('User cancelled the sign-in');
-        return;
-      }
-
-      print('Got Google User: ${googleUser.email}');
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
-      final String? idToken = googleAuth.idToken;
-      print('Got idToken: ${idToken != null}');
-
-      if (idToken == null) {
-        throw Exception('Failed to get Google ID token.');
-      }
-
-      // Call ApiService to send this token to your backend
-      final responseData = await ApiService.signInWithGoogleToken(idToken);
-
-      // Assuming responseData is a map like {'token': '...', 'user': { ... }}
-      // Use existing _handleAuthResponse to process it
-      await _handleAuthResponse(responseData);
-    } catch (e) {
-      print('Error during Google sign-in: $e');
-      // Ensure logout if partial auth occurs or error happens
-      await logout(); // Or a more specific cleanup
-      rethrow;
-    }
-  }
-
-  Future<void> logout() async {
-    try {
-      // Existing backend logout call
-      if (_token != null) {
-        await http.post(
-          Uri.parse('${ApiService.baseUrl}/auth/logout'),
-          headers: {'Authorization': 'Bearer $_token'},
-        );
-      }
-
-      // Sign out from Google
-      if (await _googleSignIn.isSignedIn()) {
-        await _googleSignIn.signOut();
-      }
-    } catch (e) {
-      print('Error during backend logout API call or Google sign out: $e');
-    } finally {
-      _token = null;
-      _user = null;
-      _isAuthenticated = false;
-      ApiService.setToken('');
-      await _clearAuthState();
-      notifyListeners();
-    }
-  }
-
-  // Verify token validity
-  Future<bool> verifyToken() async {
-    if (_token == null) return false;
-
-    try {
-      // Call your API endpoint to verify token
-      // final isValid = await ApiService.verifyToken(_token!);
-      // return isValid;
-      return true; // Replace with actual token verification
-    } catch (e) {
-      print('Error verifying token: $e');
-      await logout();
-      return false;
-    }
-  }
-
   Future<void> checkSession() async {
     if (!_isAuthenticated || _token == null) return;
     try {
       final isValid = await verifyToken();
       if (!isValid) {
-        // Token is invalid or expired
         await logout();
       }
     } catch (e) {
@@ -261,6 +254,23 @@ class AuthProvider with ChangeNotifier {
     } catch (e) {
       print('Error refreshing user data: $e');
       rethrow;
+    }
+  }
+
+  Future<bool> verifyToken() async {
+    if (_token == null) return false;
+
+    try {
+      final currentUser = _auth.currentUser;
+      if (currentUser == null) return false;
+
+      // Get a fresh token to verify it's still valid
+      _token = await currentUser.getIdToken(true);
+      return true;
+    } catch (e) {
+      print('Error verifying token: $e');
+      await logout();
+      return false;
     }
   }
 }

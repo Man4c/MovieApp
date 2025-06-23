@@ -6,7 +6,7 @@ import 'package:flutter_video_app/screens/register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
-  
+
   @override
   State<LoginScreen> createState() => _LoginScreenState();
 }
@@ -175,9 +175,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         horizontal: 16,
                         vertical: 16,
                       ),
-                      errorStyle: const TextStyle(
-                        color: Color(0xFFE53935),
-                      ),
+                      errorStyle: const TextStyle(color: Color(0xFFE53935)),
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -240,9 +238,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         horizontal: 16,
                         vertical: 16,
                       ),
-                      errorStyle: const TextStyle(
-                        color: Color(0xFFE53935),
-                      ),
+                      errorStyle: const TextStyle(color: Color(0xFFE53935)),
                       suffixIcon: IconButton(
                         icon: Icon(
                           _obscurePassword
@@ -288,7 +284,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           const Text(
                             'Remember me',
-                            style: TextStyle(color: Colors.white70, fontSize: 14),
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 14,
+                            ),
                           ),
                         ],
                       ),
@@ -323,28 +322,29 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       onPressed: _isLoading ? null : _login,
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(
-                                  Colors.white,
+                      child:
+                          _isLoading
+                              ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
+                              : const Text(
+                                'Login',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  letterSpacing: 0.5,
                                 ),
                               ),
-                            )
-                          : const Text(
-                              'Login',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                letterSpacing: 0.5,
-                              ),
-                            ),
                     ),
                   ),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 20),
                   // Divider
                   Row(
                     children: [
@@ -372,52 +372,89 @@ class _LoginScreenState extends State<LoginScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       _buildSocialButton(
-                        iconWidget: _isGoogleLoading
-                            ? const SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                            : const Icon(Icons.g_mobiledata, color: Colors.white70, size: 24), // Placeholder, use a proper Google icon
-                        onTap: _isGoogleLoading
-                            ? null
-                            : () async {
-                                setState(() => _isGoogleLoading = true);
-                                try {
-                                  final authProvider = Provider.of<AuthProvider>(context, listen: false);
-                                  await authProvider.signInWithGoogle();
+                        iconWidget:
+                            _isGoogleLoading
+                                ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                                : const Icon(
+                                  Icons.g_mobiledata,
+                                  color: Colors.white70,
+                                  size: 24,
+                                ), // Placeholder, use a proper Google icon
+                        onTap:
+                            _isGoogleLoading
+                                ? null
+                                : () async {
+                                  setState(() => _isGoogleLoading = true);
+                                  try {
+                                    final authProvider =
+                                        Provider.of<AuthProvider>(
+                                          context,
+                                          listen: false,
+                                        );
+                                    await authProvider.signInWithGoogle();
 
-                                  if (mounted && authProvider.isAuthenticated) {
-                                    Navigator.of(context).pushReplacement(
-                                      MaterialPageRoute(builder: (_) => const HomeScreen()),
-                                    );
-                                  } else if (mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Google Sign-In cancelled or failed.')),
-                                    );
+                                    if (mounted &&
+                                        authProvider.isAuthenticated) {
+                                      Navigator.of(context).pushReplacement(
+                                        MaterialPageRoute(
+                                          builder: (_) => const HomeScreen(),
+                                        ),
+                                      );
+                                    } else if (mounted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(
+                                          content: Text(
+                                            'Google Sign-In cancelled or failed.',
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  } catch (e) {
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            'Google Sign-In Error: ${e.toString()}',
+                                          ),
+                                        ),
+                                      );
+                                    }
+                                  } finally {
+                                    if (mounted) {
+                                      setState(() => _isGoogleLoading = false);
+                                    }
                                   }
-                                } catch (e) {
-                                  if (mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(content: Text('Google Sign-In Error: ${e.toString()}')),
-                                    );
-                                  }
-                                } finally {
-                                  if (mounted) {
-                                    setState(() => _isGoogleLoading = false);
-                                  }
-                                }
-                              },
+                                },
                       ),
                       const SizedBox(width: 24),
                       _buildSocialButton(
-                        iconWidget: const Icon(Icons.facebook, color: Colors.white70, size: 24),
+                        iconWidget: const Icon(
+                          Icons.facebook,
+                          color: Colors.white70,
+                          size: 24,
+                        ),
                         onTap: () {
                           // TODO: Implement Facebook login
                         },
                       ),
                       const SizedBox(width: 24),
                       _buildSocialButton(
-                        iconWidget: const Icon(Icons.alternate_email, color: Colors.white70, size: 24),
+                        iconWidget: const Icon(
+                          Icons.alternate_email,
+                          color: Colors.white70,
+                          size: 24,
+                        ),
                         onTap: () {
                           // TODO: Implement Twitter login
                         },
@@ -463,8 +500,10 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildSocialButton({
-    required Widget iconWidget, // Changed to Widget to allow CircularProgressIndicator
-    required VoidCallback? onTap, // Changed to VoidCallback? to allow null when loading
+    required Widget
+    iconWidget, // Changed to Widget to allow CircularProgressIndicator
+    required VoidCallback?
+    onTap, // Changed to VoidCallback? to allow null when loading
   }) {
     return GestureDetector(
       onTap: onTap,
