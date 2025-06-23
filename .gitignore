@@ -1,0 +1,21 @@
+# Node.js
+node_modules/
+.env
+backend/serviceAccountKey.json
+
+# Flutter
+frontend/build/
+frontend/.dart_tool/
+frontend/.idea/
+frontend/.packages
+
+# VSCode/IDE
+.vscode/
+.idea/
+
+# Lain-lain
+.DS_Store
+*.log
+
+# Stripe secret key (jangan pernah tulis di kode)
+stripe_secret.txt 
